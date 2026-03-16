@@ -14,6 +14,7 @@ Blood Pressure Tracker — a personal iOS app (with future Android path) for tra
 - expo-print for PDF generation, expo-sharing for export
 - expo-camera for photo capture
 - @react-navigation/bottom-tabs for navigation
+- react-native-ble-plx for Bluetooth communication with Omron BP monitor
 
 ## Common Commands
 
@@ -32,6 +33,7 @@ npx expo start --ios   # Run on iOS simulator
 - `src/types/` — TypeScript interfaces (Reading)
 - `src/utils/` — Pure utility functions (BP classification, thresholds, colors)
 - `src/services/ocr/` — OCR interface (`OCRService`), platform implementation, and BP text parser
+- `src/services/ble/` — Omron BLE protocol: pairing, unlock, EEPROM read, record parsing
 - `src/services/database/` — SQLite setup and reading CRUD repository
 - `src/services/report/` — HTML report generator for PDF export
 - `src/screens/` — Three tab screens: ReadingList, Capture, Report
@@ -43,6 +45,12 @@ npx expo start --ios   # Run on iOS simulator
 The OCR layer uses a platform-agnostic `OCRService` interface (`src/services/ocr/types.ts`) so implementations can be swapped per platform. Currently uses `expo-text-extractor` which wraps Apple Vision (iOS) and Google ML Kit (Android).
 
 The JS-side BP parser (`src/services/ocr/bpParser.ts`) is intentionally separate from the OCR service — it takes raw text strings and extracts systolic/diastolic/heart rate. This keeps parsing logic shared, testable, and platform-independent.
+
+### BLE Sync
+
+The app imports readings directly from an Omron BP7150 via Bluetooth using `react-native-ble-plx`. The protocol implementation in `src/services/ble/` handles Omron's custom GATT protocol (pairing, unlock, EEPROM read). Records are deduplicated by timestamp during import. Extensive debug logging (`[BLE:Sync]`, `[BLE:Protocol]`, `[BLE:Parser]` prefixes) is available in Metro console.
+
+Reference: Protocol reverse-engineered by [omblepy](https://github.com/userx14/omblepy).
 
 ### Abnormal Value Thresholds
 
