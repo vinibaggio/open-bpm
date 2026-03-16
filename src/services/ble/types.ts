@@ -1,4 +1,18 @@
+// Omron custom GATT service UUID from omblepy (used by some models, NOT the BP7150)
 export const OMRON_SERVICE_UUID = 'ecbe3980-c9a2-11e1-b1bd-0002a5d5c51b';
+
+// Omron communication service on BP7150 — contains unlock, TX, RX characteristics
+export const OMRON_ADVERTISE_UUID = '0000fe4a-0000-1000-8000-00805f9b34fb';
+
+// The service UUID used for actual communication (unlock, read, write)
+// BP7150 uses 0000fe4a, not ecbe3980
+export const OMRON_COMM_SERVICE_UUID = OMRON_ADVERTISE_UUID;
+
+// Standard Bluetooth Blood Pressure Service (BP7150 advertises this in pairing mode)
+export const BT_BLOOD_PRESSURE_UUID = '00001810-0000-1000-8000-00805f9b34fb';
+
+// All UUIDs to scan for
+export const OMRON_SCAN_UUIDS = [OMRON_SERVICE_UUID, OMRON_ADVERTISE_UUID, BT_BLOOD_PRESSURE_UUID];
 
 export const UNLOCK_CHAR_UUID = 'b305b680-aee7-11e1-a730-0002a5d5c51b';
 

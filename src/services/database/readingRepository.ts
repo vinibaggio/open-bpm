@@ -35,3 +35,8 @@ export async function deleteReading(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM readings WHERE id = ?', [id]);
 }
+
+export async function deleteAllReadings(): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM readings');
+}
