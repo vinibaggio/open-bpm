@@ -2,11 +2,12 @@
 
 ## Overview
 
-A personal blood pressure tracking iOS app (React Native) that lets users photograph their BP monitor display, automatically extracts readings via OCR, stores them locally, and generates printable reports for sharing with clinicians.
+A personal blood pressure tracking iOS app (React Native) that syncs readings from an Omron BP7150 monitor via Bluetooth, supports manual entry, stores readings locally, and generates printable reports for sharing with clinicians.
 
 ## Goals
 
-- Snap a photo of a BP monitor and have systolic, diastolic, and heart rate extracted automatically
+- Sync readings directly from the Omron BP7150 via Bluetooth
+- Manual entry as a fallback input method
 - Track readings over time with local storage
 - Generate a printable PDF report with abnormal values highlighted for clinician visits
 - iOS-first, with a clear path to Android later
@@ -15,15 +16,15 @@ A personal blood pressure tracking iOS app (React Native) that lets users photog
 
 Each reading:
 
-| Field          | Type     | Notes                                  |
-|----------------|----------|----------------------------------------|
-| id             | string   | UUID                                   |
-| systolic       | integer  | mmHg                                   |
-| diastolic      | integer  | mmHg                                   |
-| heartRate      | integer? | bpm, optional                          |
-| timestamp      | string   | ISO 8601, auto-set at capture, editable|
-| notes          | string?  | Optional free text                     |
-| sourceImageUri | string?  | Path to original photo                 |
+| Field     | Type     | Notes                                   |
+|-----------|----------|-----------------------------------------|
+| id        | string   | UUID                                    |
+| systolic  | integer  | mmHg                                    |
+| diastolic | integer  | mmHg                                    |
+| heartRate | integer? | bpm, optional                           |
+| timestamp | string   | ISO 8601, auto-set at capture, editable |
+| notes     | string?  | Optional free text                      |
+| source    | string   | 'manual' or 'ble'                       |
 
 ### Abnormal Thresholds (AHA Guidelines)
 
@@ -43,11 +44,11 @@ Three screens with a bottom tab bar:
 - Chronological list of all readings
 - Each row: date/time, systolic/diastolic, heart rate
 - Colored indicator for abnormal values (yellow=elevated, orange=stage 1, red=stage 2/crisis)
+- "Sync from Monitor" button to import readings from Omron BP7150 via BLE
+- "Clear All" to delete all readings
 
-### 2. Capture (Center Tab, Prominent)
-- Opens camera to photograph BP monitor display
-- OCR extracts numbers, presents for confirmation/editing
-- Manual entry fallback if OCR fails or user prefers typing
+### 2. Manual Entry
+- Form for manually entering systolic, diastolic, heart rate, and notes
 - Saves to local database on confirmation
 
 ### 3. Report
@@ -57,57 +58,43 @@ Three screens with a bottom tab bar:
 
 ## Technical Stack
 
-- **React Native + Expo** (managed workflow, eject if needed for native modules)
-- **expo-camera** for photo capture
-- **Native module (Swift)** for Apple Vision OCR on iOS
+- **React Native + Expo SDK 55** (TypeScript)
+- **react-native-ble-plx** for Bluetooth communication with Omron BP7150
 - **SQLite** (expo-sqlite) for local storage
-- **react-native-html-to-pdf** for PDF report generation
+- **expo-print** for PDF report generation
 - **expo-sharing** for PDF export via share sheet
 
-## OCR Architecture
+## BLE Architecture
 
-The OCR subsystem uses a platform-agnostic interface so the underlying implementation can be swapped per platform (Apple Vision on iOS, Google ML Kit on Android in the future).
+The BLE subsystem communicates with the Omron BP7150 over its custom GATT service (`0000fe4a-0000-1000-8000-00805f9b34fb`). The device is a no-pairing variant — no unlock step is needed.
 
-### Platform-Agnostic Interface
+### GATT Characteristics
+- **Unlock** (`b305b680`): read/write/notify — pairing key exchange (not needed for BP7150)
+- **TX** (`db5b55e0`): write — commands sent to device
+- **RX** (`49123040`): read/notify — responses from device
 
-```typescript
-interface OCRResult {
-  rawText: string[];   // Array of recognized text strings
-  confidence: number;  // 0-1 confidence score
-}
+### Data Transfer Protocol
+- EEPROM read/write over TX/RX with XOR checksum packets
+- 60 record slots starting at address `0x0098`, read in 16-byte blocks
+- Records are 14 bytes in a continuous byte stream (not aligned to block boundaries)
+- SYS = raw byte + 25, DIA and HR are direct values
 
-interface OCRService {
-  recognizeText(imageUri: string): Promise<OCRResult>;
-}
-```
-
-### Implementation Strategy
-
-- **iOS:** `AppleVisionOCRService` implements `OCRService` using a Swift native module wrapping Apple's Vision framework
-- **Android (future):** `GoogleMLKitOCRService` implements `OCRService` using Google ML Kit text recognition
-- The active implementation is selected at runtime based on `Platform.OS`
-
-### OCR Flow
-
-1. User takes photo → saved to app storage
-2. Photo URI passed to `OCRService.recognizeText()` → returns recognized text strings
-3. **JS-side parser** (shared across platforms) scans for number patterns typical of BP monitors and extracts systolic, diastolic, heart rate
-4. Extracted values presented to user for confirmation or manual correction
-5. Confirmed reading saved to SQLite
-
-The JS-side parser is intentionally separate from the OCR service so that parsing logic is shared and testable regardless of platform.
+### Protocol References
+- [omblepy](https://github.com/userx14/omblepy) — Python CLI for Omron BLE devices
+- [ubpm](https://codeberg.org/LazyT/ubpm) — Qt-based Omron BLE manager
 
 ## PDF Report Format
 
 Simple HTML table rendered to PDF:
-
 - Header: "Blood Pressure Report" + date range
 - Table columns: Date, Time, Systolic, Diastolic, Heart Rate
-- Abnormal rows highlighted with red background/text
+- Abnormal rows highlighted with colored background
 - Footer: generated date
 
-## Future Considerations (Not Built Now)
+## Future Considerations
 
-- iCloud sync via CloudKit native module
-- Android support: add Google ML Kit implementation behind the existing OCRService interface
+- Decode BLE record timestamps (currently uses import time)
+- Support additional Omron models
+- iCloud sync via CloudKit
+- Android support (react-native-ble-plx is cross-platform)
 - Trend charts / visualizations
