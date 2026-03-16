@@ -10,7 +10,7 @@ describe('generateReportHtml', () => {
       heartRate: 72,
       timestamp: '2026-03-14T10:00:00Z',
       notes: null,
-      sourceImageUri: null,
+      source: 'manual',
     },
     {
       id: '2',
@@ -19,7 +19,7 @@ describe('generateReportHtml', () => {
       heartRate: 80,
       timestamp: '2026-03-13T09:00:00Z',
       notes: null,
-      sourceImageUri: null,
+      source: 'manual',
     },
   ];
 

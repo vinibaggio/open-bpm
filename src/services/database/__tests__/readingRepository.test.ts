@@ -28,7 +28,7 @@ describe('readingRepository', () => {
       heartRate: 72,
       timestamp: '2026-03-14T10:00:00Z',
       notes: null,
-      sourceImageUri: null,
+      source: 'manual',
     };
     await addReading(reading);
     expect(mockDb.runAsync).toHaveBeenCalledWith(

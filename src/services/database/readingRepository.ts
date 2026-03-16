@@ -4,8 +4,8 @@ import { Reading } from '../../types/reading';
 export async function addReading(reading: Reading): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    'INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes, sourceImageUri) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [reading.id, reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.sourceImageUri]
+    'INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [reading.id, reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.source]
   );
 }
 

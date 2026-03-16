@@ -5,5 +5,5 @@ export interface Reading {
   heartRate: number | null;
   timestamp: string; // ISO 8601
   notes: string | null;
-  sourceImageUri: string | null;
+  source: 'manual' | 'ble'; // how the reading was captured
 }

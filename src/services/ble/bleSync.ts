@@ -543,7 +543,7 @@ export async function syncReadings(
         heartRate: omronReading.heartRate,
         timestamp,
         notes: null,
-        sourceImageUri: null,
+        source: 'ble',
       };
       await addReading(reading);
       imported++;

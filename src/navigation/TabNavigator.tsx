@@ -24,11 +24,11 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Capture"
+        name="Manual Entry"
         component={CaptureScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="camera" size={size + 4} color={color} />
+            <Ionicons name="create-outline" size={size} color={color} />
           ),
         }}
       />

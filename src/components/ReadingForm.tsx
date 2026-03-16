@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface Props {
   initialSystolic?: number;
   initialDiastolic?: number;
   initialHeartRate?: number | null;
-  imageUri?: string | null;
   onSave: (systolic: number, diastolic: number, heartRate: number | null, notes: string | null) => void;
   onCancel: () => void;
 }
@@ -14,7 +13,6 @@ export default function ReadingForm({
   initialSystolic,
   initialDiastolic,
   initialHeartRate,
-  imageUri,
   onSave,
   onCancel,
 }: Props) {
@@ -36,8 +34,6 @@ export default function ReadingForm({
 
   return (
     <View style={styles.container}>
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />}
-
       <Text style={styles.label}>Systolic (mmHg)</Text>
       <TextInput
         style={styles.input}
@@ -76,7 +72,7 @@ export default function ReadingForm({
 
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>Clear</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.saveBtn, !canSave && styles.disabledBtn]}
@@ -92,7 +88,6 @@ export default function ReadingForm({
 
 const styles = StyleSheet.create({
   container: { padding: 20 },
-  preview: { width: '100%', height: 150, borderRadius: 8, marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginTop: 12, marginBottom: 4 },
   input: {
     borderWidth: 1,

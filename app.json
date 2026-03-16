@@ -15,7 +15,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.vinibaggio.bloodpressure",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to photograph your blood pressure monitor and extract readings.",
         "NSBluetoothAlwaysUsageDescription": "This app connects to your Omron blood pressure monitor to import readings."
       }
     },

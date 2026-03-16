@@ -4,17 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Blood Pressure Tracker — a personal iOS app (with future Android path) for tracking blood pressure readings. Users photograph their BP monitor display, OCR extracts the values, readings are stored locally, and a printable PDF report can be generated for clinician visits.
+Blood Pressure Tracker — a personal iOS app (with future Android path) for tracking blood pressure readings. Supports Bluetooth sync with Omron BP monitors and manual entry. Generates printable PDF reports for clinician visits.
 
 ## Tech Stack
 
 - React Native + Expo SDK 55 (TypeScript)
 - SQLite (expo-sqlite) for local storage
-- expo-text-extractor for OCR (Apple Vision on iOS, Google ML Kit on Android)
+- react-native-ble-plx for Bluetooth communication with Omron BP monitors
 - expo-print for PDF generation, expo-sharing for export
-- expo-camera for photo capture
 - @react-navigation/bottom-tabs for navigation
-- react-native-ble-plx for Bluetooth communication with Omron BP monitor
 
 ## Common Commands
 
@@ -22,40 +20,44 @@ Blood Pressure Tracker — a personal iOS app (with future Android path) for tra
 npm start              # Start Expo dev server
 npm test               # Run all tests (Jest)
 npx jest path/to/test  # Run a single test file
-npm run typecheck       # TypeScript type checking (tsc --noEmit)
-npx expo start --ios   # Run on iOS simulator
+npm run typecheck      # TypeScript type checking (tsc --noEmit)
+npx expo run:ios --device "device name"  # Build and deploy to physical device
 ```
 
 ## Architecture
 
 ### Directory Structure
 
-- `src/types/` — TypeScript interfaces (Reading)
+- `src/types/` — TypeScript interfaces (Reading with `source: 'manual' | 'ble'`)
 - `src/utils/` — Pure utility functions (BP classification, thresholds, colors)
-- `src/services/ocr/` — OCR interface (`OCRService`), platform implementation, and BP text parser
-- `src/services/ble/` — Omron BLE protocol: pairing, unlock, EEPROM read, record parsing
+- `src/services/ble/` — Omron BLE protocol: scan, connect, EEPROM read, record parsing
 - `src/services/database/` — SQLite setup and reading CRUD repository
 - `src/services/report/` — HTML report generator for PDF export
-- `src/screens/` — Three tab screens: ReadingList, Capture, Report
+- `src/screens/` — Three tab screens: ReadingList, Manual Entry, Report
 - `src/components/` — Reusable UI components (ReadingRow, ReadingForm)
 - `src/navigation/` — Bottom tab navigator
 
-### OCR Subsystem
+### BLE Sync (Omron BP7150)
 
-The OCR layer uses a platform-agnostic `OCRService` interface (`src/services/ocr/types.ts`) so implementations can be swapped per platform. Currently uses `expo-text-extractor` which wraps Apple Vision (iOS) and Google ML Kit (Android).
+The app imports readings directly from an Omron BP7150 via Bluetooth using `react-native-ble-plx`. The protocol implementation in `src/services/ble/` handles Omron's custom GATT protocol over service `0000fe4a`. The BP7150 is a no-pairing variant — no unlock step needed, just connect and read EEPROM.
 
-The JS-side BP parser (`src/services/ocr/bpParser.ts`) is intentionally separate from the OCR service — it takes raw text strings and extracts systolic/diastolic/heart rate. This keeps parsing logic shared, testable, and platform-independent.
+Key files:
+- `types.ts` — GATT UUIDs, constants, memory layout
+- `omronProtocol.ts` — packet framing, CRC, commands
+- `omronParser.ts` — extracts BP readings from raw EEPROM byte stream (14-byte records, SYS = raw + 25)
+- `bleSync.ts` — high-level scan, connect, fetch, import orchestration
 
-### BLE Sync
+Debug logging: `[BLE:Sync]`, `[BLE:Protocol]`, `[BLE:Parser]` prefixes in Metro console.
 
-The app imports readings directly from an Omron BP7150 via Bluetooth using `react-native-ble-plx`. The protocol implementation in `src/services/ble/` handles Omron's custom GATT protocol (pairing, unlock, EEPROM read). Records are deduplicated by timestamp during import. Extensive debug logging (`[BLE:Sync]`, `[BLE:Protocol]`, `[BLE:Parser]` prefixes) is available in Metro console.
+Reference: Protocol based on [omblepy](https://github.com/userx14/omblepy) and [ubpm](https://codeberg.org/LazyT/ubpm).
 
-Reference: Protocol reverse-engineered by [omblepy](https://github.com/userx14/omblepy).
+### Adding New BPM Devices
+
+To add support for a new blood pressure monitor:
+1. Create a new service under `src/services/` (e.g., `src/services/ble-withings/`)
+2. Implement scan + fetch logic returning `Reading[]` with `source: 'ble'`
+3. Add a sync button or auto-detection in `ReadingListScreen`
 
 ### Abnormal Value Thresholds
 
 BP classification is in `src/utils/bloodPressure.ts` (AHA guidelines). Shared between the reading list UI (colored indicators) and PDF report (highlighted rows).
-
-## Design Spec
-
-Full design spec at `docs/superpowers/specs/2026-03-14-bloodpressure-app-design.md`.

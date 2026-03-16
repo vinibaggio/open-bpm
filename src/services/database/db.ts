@@ -13,7 +13,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       heartRate INTEGER,
       timestamp TEXT NOT NULL,
       notes TEXT,
-      sourceImageUri TEXT
+      source TEXT NOT NULL DEFAULT 'manual'
     );
   `);
   return db;
