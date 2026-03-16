@@ -22,6 +22,15 @@ export async function getReadingsByDateRange(startDate: string, endDate: string)
   );
 }
 
+export async function readingExistsByTimestamp(timestamp: string): Promise<boolean> {
+  const db = await getDatabase();
+  const result = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM readings WHERE timestamp = ?',
+    [timestamp]
+  );
+  return (result?.count ?? 0) > 0;
+}
+
 export async function deleteReading(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM readings WHERE id = ?', [id]);
