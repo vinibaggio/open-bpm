@@ -13,15 +13,11 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  s.dependency 'OpenCV2', '~> 4.3'
 
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
-    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
-    'CLANG_CXX_LIBRARY' => 'libc++',
-    'SWIFT_OBJC_BRIDGING_HEADER' => '$(PODS_TARGET_SRCROOT)/ExpoSevenSegmentReader.h',
   }
 
-  s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
+  s.source_files = "**/*.swift"
 end
