@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { createOCRService } from '../services/ocr/ocrService';
 import { parseBPFromText, ParsedBP } from '../services/ocr/bpParser';
 import { addReading } from '../services/database/readingRepository';
@@ -32,26 +33,41 @@ export default function CaptureScreen() {
     );
   }
 
-  async function handleCapture() {
-    if (!cameraRef.current) return;
+  async function processImage(uri: string) {
     setProcessing(true);
+    setImageUri(uri);
     try {
-      const photo = await cameraRef.current.takePictureAsync();
-      if (!photo) return;
-      setImageUri(photo.uri);
-
       const ocr = createOCRService();
-      const result = await ocr.recognizeText(photo.uri);
+      const result = await ocr.recognizeText(uri);
+      console.log('[OCR] Raw text:', JSON.stringify(result.rawText));
       const bp = parseBPFromText(result.rawText);
+      console.log('[OCR] Parsed BP:', JSON.stringify(bp));
       setParsed(bp);
       setScreen('form');
     } catch (e) {
+      console.log('[OCR] Error:', e);
       Alert.alert('OCR Error', 'Could not extract text. You can enter values manually.');
       setParsed(null);
       setScreen('form');
     } finally {
       setProcessing(false);
     }
+  }
+
+  async function handleCapture() {
+    if (!cameraRef.current) return;
+    const photo = await cameraRef.current.takePictureAsync();
+    if (!photo) return;
+    await processImage(photo.uri);
+  }
+
+  async function handlePickFromLibrary() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+    if (result.canceled || result.assets.length === 0) return;
+    await processImage(result.assets[0].uri);
   }
 
   function handleManualEntry() {
@@ -112,7 +128,9 @@ export default function CaptureScreen() {
         >
           <View style={styles.captureInner} />
         </TouchableOpacity>
-        <View style={{ width: 80 }} />
+        <TouchableOpacity style={styles.manualBtn} onPress={handlePickFromLibrary}>
+          <Text style={styles.manualText}>Library</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

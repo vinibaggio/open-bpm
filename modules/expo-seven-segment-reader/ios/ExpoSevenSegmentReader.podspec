@@ -20,6 +20,7 @@ Pod::Spec.new do |s|
     'DEFINES_MODULE' => 'YES',
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
     'CLANG_CXX_LIBRARY' => 'libc++',
+    'SWIFT_OBJC_BRIDGING_HEADER' => '$(PODS_TARGET_SRCROOT)/ExpoSevenSegmentReader.h',
   }
 
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"

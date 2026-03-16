@@ -12,7 +12,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vinibaggio.bloodpressure",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to photograph your blood pressure monitor and extract readings."
+      }
     },
     "android": {
       "adaptiveIcon": {

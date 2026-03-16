@@ -1,5 +1,13 @@
-// Reexport the native module. On web, it will be resolved to ExpoSevenSegmentReaderModule.web.ts
-// and on native platforms to ExpoSevenSegmentReaderModule.ts
-export { default } from './src/ExpoSevenSegmentReaderModule';
-export { default as ExpoSevenSegmentReaderView } from './src/ExpoSevenSegmentReaderView';
-export * from  './src/ExpoSevenSegmentReader.types';
+import { requireNativeModule } from 'expo-modules-core';
+
+const ExpoSevenSegmentReaderModule = requireNativeModule('ExpoSevenSegmentReader');
+
+export interface SevenSegmentReading {
+  systolic: number;
+  diastolic: number;
+  heartRate?: number;
+}
+
+export async function readDisplay(imageUri: string): Promise<SevenSegmentReading> {
+  return ExpoSevenSegmentReaderModule.readDisplay(imageUri);
+}

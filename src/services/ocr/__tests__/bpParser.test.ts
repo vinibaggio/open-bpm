@@ -35,4 +35,28 @@ describe('parseBPFromText', () => {
     const result = parseBPFromText(['Blood Pressure: 135/88 Pulse: 65']);
     expect(result).toEqual({ systolic: 135, diastolic: 88, heartRate: 65 });
   });
+
+  it('extracts using SYS/DIA/PULSE labels from Omron-style OCR', () => {
+    const result = parseBPFromText([
+      'OMRON', 'SYS mmHg', '120', 'DIA mmHg', '69', 'PULSE /min', '59', 'START STOP'
+    ]);
+    expect(result).toEqual({ systolic: 120, diastolic: 69, heartRate: 59 });
+  });
+
+  it('extracts using labels when text is on same line', () => {
+    const result = parseBPFromText(['SYS 135', 'DIA 88', 'PULSE 72']);
+    expect(result).toEqual({ systolic: 135, diastolic: 88, heartRate: 72 });
+  });
+
+  it('extracts using labels case-insensitively', () => {
+    const result = parseBPFromText(['sys mmHg 120', 'dia mmHg 80', 'pulse /min 65']);
+    expect(result).toEqual({ systolic: 120, diastolic: 80, heartRate: 65 });
+  });
+
+  it('handles Omron OCR with Intelli sense text mixed in', () => {
+    const result = parseBPFromText([
+      'OMRON', 'SYS', 'mmHg', 'Intelli', 'sense', '120', 'DIA', 'mmHg', '69', 'PULSE', '/min', '59'
+    ]);
+    expect(result).toEqual({ systolic: 120, diastolic: 69, heartRate: 59 });
+  });
 });
