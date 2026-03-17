@@ -1,4 +1,4 @@
-import { OmronReading } from './types';
+import { OmronReading, RECORDS_PER_USER } from './types';
 
 /**
  * Check if a 16-byte block is all 0xFF (empty EEPROM slot)
@@ -123,6 +123,7 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     );
 
     readings.push({
+      counter,
       systolic: sys,
       diastolic: dia,
       heartRate: hr,
@@ -135,7 +136,25 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     i += 12;
   }
 
-  console.log(`[BLE:Parser] Found ${readings.length} valid readings in byte stream`);
+  // Filter stale EEPROM data: only keep readings whose counter is
+  // within RECORDS_PER_USER (60) of the highest counter.
+  // Stale data from previous recording cycles will have distant counters.
+  if (readings.length > 0) {
+    const maxCounter = Math.max(...readings.map(r => r.counter));
+    const minValid = maxCounter - RECORDS_PER_USER;
+    const filtered = readings.filter(r => {
+      if (r.counter >= minValid) return true;
+      console.log(
+        `[BLE:Parser] Filtering stale reading: counter=0x${r.counter.toString(16)} ` +
+        `SYS=${r.systolic} DIA=${r.diastolic} (too far from max counter 0x${maxCounter.toString(16)})`
+      );
+      return false;
+    });
+    console.log(`[BLE:Parser] Found ${filtered.length} current readings (${readings.length - filtered.length} stale filtered)`);
+    return filtered;
+  }
+
+  console.log(`[BLE:Parser] Found 0 valid readings in byte stream`);
   return readings;
 }
 

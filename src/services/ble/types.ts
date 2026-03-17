@@ -43,6 +43,7 @@ export const RECORD_SIZE = 16;
 export const BLOCK_SIZE = 16;
 
 export interface OmronReading {
+  counter: number;
   systolic: number;
   diastolic: number;
   heartRate: number;
