@@ -264,17 +264,6 @@ export async function pairDevice(device: Device, onStatus?: StatusCallback): Pro
   console.log('[BLE:Sync] Connected, discovering services...');
   await connected.discoverAllServicesAndCharacteristics();
 
-  // Log discovered services
-  const services = await connected.services();
-  console.log(`[BLE:Sync] Discovered ${services.length} services:`);
-  for (const svc of services) {
-    console.log(`[BLE:Sync]   Service: ${svc.uuid}`);
-    const chars = await svc.characteristics();
-    for (const ch of chars) {
-      console.log(`[BLE:Sync]     Char: ${ch.uuid} (read=${ch.isReadable} write=${ch.isWritableWithResponse} notify=${ch.isNotifiable})`);
-    }
-  }
-
   onStatus?.('Pairing...');
 
   // === STRATEGY A: Try no-pairing flow (newer HW revisions) ===
@@ -472,7 +461,6 @@ export async function syncReadings(
     for (let i = 0; i < RECORDS_PER_USER; i++) {
       const address = RECORD_START_ADDRESS + i * RECORD_SIZE;
       if (i % 10 === 0) {
-        console.log(`[BLE:Sync] Reading blocks ${i + 1}-${Math.min(i + 10, RECORDS_PER_USER)}/${RECORDS_PER_USER}`);
         onStatus?.(`Reading blocks ${i + 1}/${RECORDS_PER_USER}...`);
       }
 
@@ -547,7 +535,6 @@ export async function syncReadings(
       };
       await addReading(reading);
       imported++;
-      console.log(`[BLE:Sync] Imported: ${reading.systolic}/${reading.diastolic} HR=${reading.heartRate}`);
     }
 
     console.log(`[BLE:Sync] Import complete: ${imported} new readings`);

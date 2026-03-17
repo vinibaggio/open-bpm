@@ -94,34 +94,33 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     // Check if the clock was set: default year is 0x15 (21 = 2021)
     const clockIsSet = yearRaw !== 0x15;
 
-    let timestamp: Date;
-    if (clockIsSet) {
-      const year = 2000 + yearRaw;
-      const minute = minuteRaw & 0xF7; // clear bit 3 (clock-set flag)
-      const hour = hourRaw;
-      const month = (monthSecRaw >> 6) + 1; // upper 2 bits + 1
-      const day = dayRaw & 0xF7; // clear bit 3 (clock-set flag)
-      const second = monthSecRaw & 0x3F; // lower 6 bits
-
-      timestamp = new Date(year, month - 1, day, hour, minute, second);
-
+    // Skip readings without valid timestamps (clock not set on monitor)
+    if (!clockIsSet) {
       console.log(
-        `[BLE:Parser] Found reading at offset ${i}: ` +
+        `[BLE:Parser] Skipping reading at offset ${i}: ` +
         `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
-        `timestamp=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
-        `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')} ` +
-        `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+        `(clock not set, raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
       );
-    } else {
-      timestamp = new Date(); // fall back to import time
-
-      console.log(
-        `[BLE:Parser] Found reading at offset ${i}: ` +
-        `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
-        `timestamp=import-time (clock not set) ` +
-        `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
-      );
+      i += 12;
+      continue;
     }
+
+    const year = 2000 + yearRaw;
+    const minute = minuteRaw & 0xF7; // clear bit 3 (clock-set flag)
+    const hour = hourRaw;
+    const month = (monthSecRaw >> 6) + 1; // upper 2 bits + 1
+    const day = dayRaw & 0xF7; // clear bit 3 (clock-set flag)
+    const second = monthSecRaw & 0x3F; // lower 6 bits
+
+    const timestamp = new Date(year, month - 1, day, hour, minute, second);
+
+    console.log(
+      `[BLE:Parser] Found reading at offset ${i}: ` +
+      `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
+      `timestamp=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
+      `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')} ` +
+      `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+    );
 
     readings.push({
       systolic: sys,

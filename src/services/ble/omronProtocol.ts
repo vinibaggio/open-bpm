@@ -36,14 +36,12 @@ export function verifyChecksum(data: Uint8Array): boolean {
 export function buildStartCommand(): Uint8Array {
   const cmd = new Uint8Array([0x08, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00]);
   cmd[7] = computeXorChecksum(cmd.subarray(0, 7));
-  console.log(hexDump(cmd, 'TX START'));
   return cmd;
 }
 
 export function buildEndCommand(): Uint8Array {
   const cmd = new Uint8Array([0x08, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
   cmd[7] = computeXorChecksum(cmd.subarray(0, 7));
-  console.log(hexDump(cmd, 'TX END'));
   return cmd;
 }
 
@@ -52,7 +50,6 @@ export function buildReadCommand(address: number, size: number): Uint8Array {
   const addrLo = address & 0xff;
   const cmd = new Uint8Array([0x08, 0x01, 0x00, addrHi, addrLo, size, 0x00, 0x00]);
   cmd[7] = computeXorChecksum(cmd.subarray(0, 7));
-  console.log(hexDump(cmd, `TX READ @0x${address.toString(16).padStart(4, '0')} size=${size}`));
   return cmd;
 }
 
@@ -62,7 +59,6 @@ export function parseResponseType(data: Uint8Array): number {
     return -1;
   }
   const type = (data[1] << 8) | data[2];
-  console.log(hexDump(data, `RX type=0x${type.toString(16).padStart(4, '0')}`));
   return type;
 }
 
@@ -84,7 +80,5 @@ export function extractResponseData(data: Uint8Array): Uint8Array {
 
   verifyChecksum(data);
 
-  const hex = Array.from(extracted).map(b => b.toString(16).padStart(2, '0')).join(' ');
-  console.log(`[BLE:Protocol] Extracted data (${dataLen} bytes): ${hex}`);
   return extracted;
 }
