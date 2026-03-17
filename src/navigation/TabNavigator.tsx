@@ -1,17 +1,38 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity } from 'react-native';
 import ReadingListScreen from '../screens/ReadingListScreen';
-import CaptureScreen from '../screens/CaptureScreen';
-import ReportScreen from '../screens/ReportScreen';
+import TrendsScreen from '../screens/TrendsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
+export type RootStackParamList = {
+  Tabs: undefined;
+  Settings: undefined;
+};
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function TabNavigator() {
+function SettingsButton() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Settings')}
+      style={{ marginRight: 16 }}
+    >
+      <Ionicons name="settings-outline" size={22} color="#2196F3" />
+    </TouchableOpacity>
+  );
+}
+
+function TabsScreen() {
   return (
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: '#2196F3',
-        headerShown: true,
+        headerRight: () => <SettingsButton />,
       }}
     >
       <Tab.Screen
@@ -24,23 +45,31 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Manual Entry"
-        component={CaptureScreen}
+        name="Trends"
+        component={TrendsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="create-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Report"
-        component={ReportScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="trending-up" size={size} color={color} />
           ),
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function RootNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Tabs"
+        component={TabsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerShown: true }}
+      />
+    </Stack.Navigator>
   );
 }
