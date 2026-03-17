@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
 import { getSavedDevice, saveDevice, forgetDevice, SavedDevice } from '../services/device/deviceStorage';
 import { scanForOmron } from '../services/ble/bleSync';
 import { getAllReadings, deleteAllReadings } from '../services/database/readingRepository';
@@ -68,6 +69,26 @@ export default function SettingsScreen() {
     const html = generateReportHtml(readings, 'All Time', 'Present');
     const { uri } = await Print.printToFileAsync({ html });
     await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+  }
+
+  async function handleExportCsv() {
+    const readings = await getAllReadings();
+    if (readings.length === 0) {
+      Alert.alert('No Data', 'No readings to export.');
+      return;
+    }
+    const header = 'Date,Time,Systolic,Diastolic,HeartRate,Source,Notes';
+    const rows = readings.map(r => {
+      const d = new Date(r.timestamp);
+      const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const notes = r.notes ? `"${r.notes.replace(/"/g, '""')}"` : '';
+      return `${date},${time},${r.systolic},${r.diastolic},${r.heartRate ?? ''},${r.source},${notes}`;
+    });
+    const csv = [header, ...rows].join('\n');
+    const file = new File(Paths.cache, 'readings.csv');
+    file.write(csv);
+    await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
   }
 
   async function handleDeleteAll() {
@@ -137,6 +158,10 @@ export default function SettingsScreen() {
       <View style={styles.group}>
         <TouchableOpacity style={styles.row} onPress={handleExportAll}>
           <Text style={styles.rowTitle}>Export All Readings as PDF</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={handleExportCsv}>
+          <Text style={styles.rowTitle}>Export All Readings as CSV</Text>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
       </View>
