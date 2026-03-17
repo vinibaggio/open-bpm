@@ -24,7 +24,10 @@ export default function ReadingRow({ reading }: Props) {
           {reading.heartRate ? ` · ${reading.heartRate} bpm` : ''}
         </Text>
         <Text style={styles.meta}>
-          {dateStr} {timeStr} · {label}
+          {dateStr} {timeStr} · {label} ·{' '}
+          <Text style={reading.source === 'ble' ? styles.bleBadge : styles.manualBadge}>
+            {reading.source === 'ble' ? 'BLE' : 'Manual'}
+          </Text>
         </Text>
       </View>
     </View>
@@ -48,4 +51,6 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   bp: { fontSize: 18, fontWeight: '600' },
   meta: { fontSize: 13, color: '#888', marginTop: 2 },
+  bleBadge: { color: '#2196F3', fontWeight: '600' },
+  manualBadge: { color: '#888' },
 });
