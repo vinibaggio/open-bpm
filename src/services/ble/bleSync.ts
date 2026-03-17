@@ -535,6 +535,7 @@ export async function syncReadings(
       };
       await addReading(reading);
       imported++;
+      console.log(`[BLE:Sync] Imported: ${reading.systolic}/${reading.diastolic} HR=${reading.heartRate} @ ${timestamp}`);
     }
 
     console.log(`[BLE:Sync] Import complete: ${imported} new readings`);
