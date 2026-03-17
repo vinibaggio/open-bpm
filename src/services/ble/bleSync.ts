@@ -20,7 +20,7 @@ import {
   extractResponseData,
   hexDump,
 } from './omronProtocol';
-import { parseAllRecords, isEmptyRecord, dumpRecord } from './omronParser';
+import { parseAllRecords, isEmptyRecord } from './omronParser';
 import { addReading, readingExistsByTimestamp } from '../database/readingRepository';
 import { Reading } from '../../types/reading';
 import { v4 as uuidv4 } from 'uuid';
@@ -72,7 +72,6 @@ async function waitForNotification(
         }
         if (char?.value) {
           const data = base64ToUint8Array(char.value);
-          console.log(hexDump(data, `NOTIFY ${charUuid.substring(0, 8)}`));
           resolve(data);
         } else {
           console.log(`[BLE:Sync] Empty notification on ${charUuid}`);
@@ -89,7 +88,6 @@ async function writeCharacteristic(
   data: Uint8Array,
   withResponse: boolean = true
 ): Promise<void> {
-  console.log(hexDump(data, `WRITE(${withResponse ? 'resp' : 'noResp'}) ${charUuid.substring(0, 8)}`));
   if (withResponse) {
     await device.writeCharacteristicWithResponseForService(
       OMRON_COMM_SERVICE_UUID,
@@ -221,7 +219,6 @@ function createNotificationQueue(device: Device, serviceUuid: string, charUuid: 
       }
       if (char?.value) {
         const data = base64ToUint8Array(char.value);
-        console.log(hexDump(data, `NOTIFY ${charUuid.substring(0, 8)}`));
         if (pending.length > 0) {
           const p = pending.shift()!;
           clearTimeout(p.timer);
@@ -495,8 +492,6 @@ export async function syncReadings(
         errorCount++;
         continue;
       }
-
-      dumpRecord(blockData, i);
 
       if (isEmptyRecord(blockData)) {
         emptyCount++;
