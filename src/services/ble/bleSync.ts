@@ -519,6 +519,10 @@ export async function syncReadings(
     for (const omronReading of readings) {
       const timestamp = omronReading.timestamp.toISOString();
 
+      if (await readingExistsByTimestamp(timestamp)) {
+        continue;
+      }
+
       const reading: Reading = {
         id: uuidv4(),
         systolic: omronReading.systolic,
