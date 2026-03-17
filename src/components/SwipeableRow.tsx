@@ -16,7 +16,7 @@ export default function SwipeableRow({ children, onDelete }: Props) {
     dragX: Animated.AnimatedInterpolation<number>
   ) {
     const scale = dragX.interpolate({
-      inputRange: [-80, 0],
+      inputRange: [-90, 0],
       outputRange: [1, 0.5],
       extrapolate: 'clamp',
     });
@@ -45,9 +45,8 @@ const styles = StyleSheet.create({
   deleteAction: {
     backgroundColor: '#F44336',
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    width: 80,
+    alignItems: 'center',
+    width: 90,
   },
   deleteText: {
     color: '#fff',
