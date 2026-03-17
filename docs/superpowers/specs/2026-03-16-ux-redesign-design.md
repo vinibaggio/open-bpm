@@ -37,6 +37,7 @@ The primary screen. Shows all blood pressure readings in reverse chronological o
 - Appears below the header when a BLE device is configured in Settings.
 - Shows device name and connection status (e.g., "Omron BP7150 connected").
 - Contains a "Sync" button that triggers the existing BLE sync flow.
+- During sync: button shows a spinner and is disabled, status text updates with progress (e.g., "Scanning...", "Reading blocks 10/60...") — same status messages as the current implementation.
 - Hidden when no device is configured — first-time BLE setup happens in Settings.
 
 ### Reading List
@@ -63,12 +64,11 @@ Daily dashboard for tracking BP and heart rate over time.
 
 ### Header
 - Title: "Trends"
-- Right: "Export PDF" button — generates a PDF report scoped to the currently selected time range using the existing `expo-print` + `expo-sharing` flow.
-- Right: gear icon (⚙️) navigates to Settings.
+- Right side, left to right: "Export PDF" text button, then gear icon (⚙️). The gear icon is consistent across both tabs. "Export PDF" is a text button (not an icon) to make its purpose clear.
 
 ### Time Range Picker
 - Segmented control: **7D / 30D / 90D / All**
-- Defaults to 30D.
+- Defaults to 30D. Selection resets to default when navigating away from the tab.
 - Filters both charts and summary stats.
 
 ### Blood Pressure Chart
@@ -101,8 +101,8 @@ Daily dashboard for tracking BP and heart rate over time.
 Accessed via gear icon from either tab. Standard iOS grouped list style (gray background, white grouped rows).
 
 ### Bluetooth Monitor Section
-- **Paired device row**: Shows device name (e.g., "Omron BP7150"), pairing status, and last sync date. "Forget" button (red text) removes the pairing.
-- **Scan for Device row**: Triggers BLE discovery. Scans for nearby Omron monitors and lets the user select one. This is where first-time BLE setup happens.
+- **Saved device row**: Shows device name (e.g., "Omron BP7150"), connection state, and last sync date. "Forget" button (red text) removes the saved device. Note: this is app-level device remembering, not BLE pairing — the BP7150 is a no-pairing variant that connects directly.
+- **Scan for Device row**: Triggers BLE discovery using the existing `scanForOmron` logic (scans for Omron service UUIDs). If multiple Omron devices are found, shows a list to select from. Only Omron devices are supported — no multi-vendor discovery. This is where first-time device setup happens.
 
 ### Export Section
 - **Export All Readings as PDF**: Full export of all readings (not time-scoped). Uses the existing `expo-print` + `expo-sharing` flow. This complements the Trends tab's time-scoped export.
@@ -124,7 +124,7 @@ Accessed via gear icon from either tab. Standard iOS grouped list style (gray ba
 | Manual entry is a dedicated tab | Manual entry is a bottom sheet from FAB |
 | Report is a dedicated tab with date pickers | PDF export from Trends header (time-scoped) and Settings (full) |
 | "Clear All" button in readings toolbar | Swipe-to-delete on individual rows; "Delete All" moved to Settings |
-| No device management | Settings screen with paired device info, forget, and scan |
+| No device management | Settings screen with saved device info, forget, and scan |
 | No charts or trends | Trends tab with BP chart, HR chart, and summary stats |
 | Sync button always visible | Sync banner only when device is configured |
 
@@ -139,12 +139,9 @@ Accessed via gear icon from either tab. Standard iOS grouped list style (gray ba
 
 ## New Dependencies
 
-- A charting library for the Trends tab. Options:
-  - `victory-native` + `react-native-svg` — mature, flexible, good for line charts.
-  - `react-native-chart-kit` — simpler API, less customizable.
-  - Recommendation: `victory-native` for the AHA zone background customization.
-- `react-native-gesture-handler` (likely already present via navigation) for swipe-to-delete.
-- A bottom sheet library (e.g., `@gorhom/bottom-sheet`) for the manual entry modal, or a simple React Native `Modal`.
+- `victory-native` + `react-native-svg` — for the Trends tab charts. Chosen over `react-native-chart-kit` for flexibility with AHA zone background customization.
+- `react-native-gesture-handler` — new dependency, required for swipe-to-delete gestures. Will require a native rebuild.
+- React Native `Modal` — for the manual entry bottom sheet. Using the built-in `Modal` component to avoid pulling in `@gorhom/bottom-sheet` and its peer dependencies (`react-native-reanimated`, `react-native-gesture-handler` setup). A simple slide-up modal is sufficient for this form.
 
 ## File Impact
 
