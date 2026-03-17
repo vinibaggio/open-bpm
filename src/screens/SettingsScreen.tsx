@@ -1,14 +1,207 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { getSavedDevice, saveDevice, forgetDevice, SavedDevice } from '../services/device/deviceStorage';
+import { scanForOmron } from '../services/ble/bleSync';
+import { getAllReadings, deleteAllReadings } from '../services/database/readingRepository';
+import { generateReportHtml } from '../services/report/reportHtml';
 
 export default function SettingsScreen() {
+  const [device, setDevice] = useState<SavedDevice | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSavedDevice().then((d) => {
+        setDevice(d);
+        setLoading(false);
+      });
+    }, [])
+  );
+
+  async function handleScan() {
+    setScanning(true);
+    try {
+      const found = await scanForOmron();
+      const name = found.name || found.localName || 'Omron Monitor';
+      await saveDevice(found.id, name);
+      setDevice({ id: found.id, name, lastSyncDate: null });
+      Alert.alert('Device Saved', `${name} has been saved.`);
+    } catch (e: any) {
+      Alert.alert('Scan Failed', e.message || 'Could not find a device.');
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function handleForget() {
+    Alert.alert('Forget Device', 'Remove this device?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Forget',
+        style: 'destructive',
+        onPress: async () => {
+          await forgetDevice();
+          setDevice(null);
+        },
+      },
+    ]);
+  }
+
+  async function handleExportAll() {
+    const readings = await getAllReadings();
+    if (readings.length === 0) {
+      Alert.alert('No Data', 'No readings to export.');
+      return;
+    }
+    const html = generateReportHtml(readings, 'All Time', 'Present');
+    const { uri } = await Print.printToFileAsync({ html });
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+  }
+
+  async function handleDeleteAll() {
+    Alert.alert(
+      'Delete All Readings',
+      'Are you sure? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteAllReadings();
+            Alert.alert('Done', 'All readings have been deleted.');
+          },
+        },
+      ]
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.placeholder}>Settings — coming soon</Text>
-    </View>
+    <ScrollView style={styles.container}>
+      {/* Bluetooth Monitor */}
+      <Text style={styles.sectionHeader}>BLUETOOTH MONITOR</Text>
+      <View style={styles.group}>
+        {device ? (
+          <View style={styles.row}>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>{device.name}</Text>
+              <Text style={styles.rowSubtitle}>
+                Saved{device.lastSyncDate
+                  ? ` · Last synced ${new Date(device.lastSyncDate).toLocaleDateString()}`
+                  : ''}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={handleForget}>
+              <Text style={styles.forgetText}>Forget</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <TouchableOpacity
+          style={[styles.row, device && styles.rowBorder]}
+          onPress={handleScan}
+          disabled={scanning}
+        >
+          <Text style={styles.linkText}>
+            {scanning ? 'Scanning...' : 'Scan for Device'}
+          </Text>
+          {scanning ? (
+            <ActivityIndicator size="small" color="#2196F3" />
+          ) : (
+            <Text style={styles.chevron}>›</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Export */}
+      <Text style={styles.sectionHeader}>EXPORT</Text>
+      <View style={styles.group}>
+        <TouchableOpacity style={styles.row} onPress={handleExportAll}>
+          <Text style={styles.rowTitle}>Export All Readings as PDF</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Data */}
+      <Text style={styles.sectionHeader}>DATA</Text>
+      <View style={styles.group}>
+        <TouchableOpacity style={styles.row} onPress={handleDeleteAll}>
+          <Text style={styles.destructiveText}>Delete All Readings</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.footer}>
+        This will permanently remove all saved readings. This cannot be undone.
+      </Text>
+
+      {/* About */}
+      <Text style={styles.sectionHeader}>ABOUT</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>Version</Text>
+          <Text style={styles.rowValue}>1.0.0</Text>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
-  placeholder: { fontSize: 16, color: '#999' },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 8,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#888',
+    letterSpacing: 0.5,
+  },
+  group: {
+    backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ddd',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  rowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#eee',
+  },
+  rowContent: { flex: 1 },
+  rowTitle: { fontSize: 16, color: '#333' },
+  rowSubtitle: { fontSize: 13, color: '#4CAF50', marginTop: 2 },
+  rowValue: { fontSize: 16, color: '#999' },
+  chevron: { fontSize: 20, color: '#ccc' },
+  linkText: { fontSize: 16, color: '#2196F3' },
+  forgetText: { fontSize: 14, color: '#F44336' },
+  destructiveText: { fontSize: 16, color: '#F44336' },
+  footer: { paddingHorizontal: 16, paddingTop: 8, fontSize: 12, color: '#999', lineHeight: 18 },
 });
