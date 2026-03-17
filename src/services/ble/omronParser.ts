@@ -91,11 +91,13 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     const monthSecRaw = buffer[i + 10];
     const dayRaw = buffer[i + 11];
 
-    // Check if the clock was set: default year is 0x15 (21 = 2021)
-    const clockIsSet = yearRaw !== 0x15;
+    // Skip readings without valid timestamps:
+    // - default year 0x15 (21 = 2021) means clock was not set
+    // - year outside 2024-2035 means bogus/stale EEPROM data
+    const year = 2000 + yearRaw;
+    const hasValidTimestamp = yearRaw !== 0x15 && year >= 2024 && year <= 2035;
 
-    // Skip readings without valid timestamps (clock not set on monitor)
-    if (!clockIsSet) {
+    if (!hasValidTimestamp) {
       console.log(
         `[BLE:Parser] Skipping reading at offset ${i}: ` +
         `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
@@ -105,7 +107,6 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       continue;
     }
 
-    const year = 2000 + yearRaw;
     const minute = minuteRaw & 0xF7; // clear bit 3 (clock-set flag)
     const hour = hourRaw;
     const month = (monthSecRaw >> 6) + 1; // upper 2 bits + 1
