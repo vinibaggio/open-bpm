@@ -38,5 +38,16 @@ export async function deleteReading(id: string): Promise<void> {
 
 export async function deleteAllReadings(): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync('DELETE FROM readings');
+  await db.execAsync(`
+    DROP TABLE IF EXISTS readings;
+    CREATE TABLE IF NOT EXISTS readings (
+      id TEXT PRIMARY KEY,
+      systolic INTEGER NOT NULL,
+      diastolic INTEGER NOT NULL,
+      heartRate INTEGER,
+      timestamp TEXT NOT NULL,
+      notes TEXT,
+      source TEXT NOT NULL DEFAULT 'manual'
+    );
+  `);
 }
