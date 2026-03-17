@@ -11,12 +11,25 @@ export function isEmptyRecord(record: Uint8Array): boolean {
  * Parse all readings from the raw EEPROM byte stream.
  *
  * The BP7150 stores records as a continuous byte stream where each record
- * is approximately 14 bytes. Records do NOT align to 16-byte read boundaries.
+ * is 14 bytes.
  *
- * Record format (discovered by matching known reading 120/69/59):
- *   [counter] [00] [B2] [B3] [SYS_raw] [DIA] [HR] [7 bytes timestamp/metadata]
+ * Record format (14 bytes):
+ *   [0] counter
+ *   [1] 0x00 (delimiter)
+ *   [2] measurement_data (complement-checked with byte[3])
+ *   [3] ~byte[2] (bitwise complement for error detection)
+ *   [4] SYS_raw (SYS = raw + 25)
+ *   [5] DIA
+ *   [6] HR
+ *   [7] year (since 2000)
+ *   [8] minute (bit 3 = clock-set flag, clear for value)
+ *   [9] hour
+ *   [10] (upper 2 bits: month-1, lower 6 bits: second)
+ *   [11] day (bit 3 = clock-set flag, clear for value)
+ *   [12-13] flags
  *
- * Where: SYS = SYS_raw + 25, DIA and HR are direct values.
+ * When the monitor's clock is not set, bytes [7-13] contain defaults
+ * (typically year=0x15=21). In that case we fall back to import time.
  *
  * Strategy: Concatenate all raw blocks into a single buffer, then scan for
  * valid BP value triplets.
@@ -69,20 +82,46 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    // Try to extract timestamp from bytes after the measurement
-    // For now, use the counter byte as a relative ordering
     const counter = buffer[i];
 
-    // Attempt timestamp from surrounding bytes
-    // The bytes after HR seem to follow pattern: [15/XX] [20/XX] [04/XX] ...
-    // For now, use import time since we can't reliably decode timestamps yet
-    const timestamp = new Date(); // will be set to import time
+    // Decode timestamp from bytes [7-13] of the record
+    const yearRaw = buffer[i + 7];
+    const minuteRaw = buffer[i + 8];
+    const hourRaw = buffer[i + 9];
+    const monthSecRaw = buffer[i + 10];
+    const dayRaw = buffer[i + 11];
 
-    console.log(
-      `[BLE:Parser] Found reading at offset ${i}: ` +
-      `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
-      `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
-    );
+    // Check if the clock was set: default year is 0x15 (21 = 2021)
+    const clockIsSet = yearRaw !== 0x15;
+
+    let timestamp: Date;
+    if (clockIsSet) {
+      const year = 2000 + yearRaw;
+      const minute = minuteRaw & 0xF7; // clear bit 3 (clock-set flag)
+      const hour = hourRaw;
+      const month = (monthSecRaw >> 6) + 1; // upper 2 bits + 1
+      const day = dayRaw & 0xF7; // clear bit 3 (clock-set flag)
+      const second = monthSecRaw & 0x3F; // lower 6 bits
+
+      timestamp = new Date(year, month - 1, day, hour, minute, second);
+
+      console.log(
+        `[BLE:Parser] Found reading at offset ${i}: ` +
+        `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
+        `timestamp=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
+        `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')} ` +
+        `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+      );
+    } else {
+      timestamp = new Date(); // fall back to import time
+
+      console.log(
+        `[BLE:Parser] Found reading at offset ${i}: ` +
+        `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
+        `timestamp=import-time (clock not set) ` +
+        `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+      );
+    }
 
     readings.push({
       systolic: sys,
