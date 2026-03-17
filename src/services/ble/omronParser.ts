@@ -136,17 +136,30 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
     i += 12;
   }
 
-  // Filter stale EEPROM data: only keep readings whose counter is
-  // within RECORDS_PER_USER (60) of the highest counter.
-  // Stale data from previous recording cycles will have distant counters.
-  if (readings.length > 0) {
-    const maxCounter = Math.max(...readings.map(r => r.counter));
-    const minValid = maxCounter - RECORDS_PER_USER;
+  // Filter stale EEPROM data: find the largest group of readings with
+  // consecutive counters (gaps of ≤4 allowed). Stale data from previous
+  // recording cycles will have isolated/distant counters.
+  if (readings.length > 1) {
+    const sorted = [...readings].sort((a, b) => a.counter - b.counter);
+    let bestStart = 0, bestLen = 1, curStart = 0, curLen = 1;
+    for (let j = 1; j < sorted.length; j++) {
+      if (sorted[j].counter - sorted[j - 1].counter <= 4) {
+        curLen++;
+      } else {
+        curStart = j;
+        curLen = 1;
+      }
+      if (curLen > bestLen) {
+        bestStart = curStart;
+        bestLen = curLen;
+      }
+    }
+    const kept = new Set(sorted.slice(bestStart, bestStart + bestLen));
     const filtered = readings.filter(r => {
-      if (r.counter >= minValid) return true;
+      if (kept.has(r)) return true;
       console.log(
         `[BLE:Parser] Filtering stale reading: counter=0x${r.counter.toString(16)} ` +
-        `SYS=${r.systolic} DIA=${r.diastolic} (too far from max counter 0x${maxCounter.toString(16)})`
+        `SYS=${r.systolic} DIA=${r.diastolic}`
       );
       return false;
     });
