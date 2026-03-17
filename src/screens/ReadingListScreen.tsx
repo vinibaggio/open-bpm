@@ -10,24 +10,46 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Reading } from '../types/reading';
-import { getAllReadings, deleteAllReadings } from '../services/database/readingRepository';
+import {
+  getAllReadings,
+  deleteReading,
+} from '../services/database/readingRepository';
 import ReadingRow from '../components/ReadingRow';
+import SwipeableRow from '../components/SwipeableRow';
+import ManualEntrySheet from '../components/ManualEntrySheet';
 import { scanForOmron, syncReadings } from '../services/ble/bleSync';
+import { addReading } from '../services/database/readingRepository';
+import { getSavedDevice, updateLastSyncDate, SavedDevice } from '../services/device/deviceStorage';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/TabNavigator';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function ReadingListScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [savedDevice, setSavedDevice] = useState<SavedDevice | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      getAllReadings().then((data) => {
-        setReadings(data);
-        setLoading(false);
-      });
+      loadData();
     }, [])
   );
+
+  async function loadData() {
+    const [data, device] = await Promise.all([
+      getAllReadings(),
+      getSavedDevice(),
+    ]);
+    setReadings(data);
+    setSavedDevice(device);
+    setLoading(false);
+  }
 
   async function handleSync() {
     setSyncing(true);
@@ -36,6 +58,7 @@ export default function ReadingListScreen() {
       const device = await scanForOmron(setStatus);
       const imported = await syncReadings(device, setStatus);
       if (imported > 0) {
+        await updateLastSyncDate();
         const updated = await getAllReadings();
         setReadings(updated);
       }
@@ -48,22 +71,43 @@ export default function ReadingListScreen() {
     }
   }
 
-  async function handleDeleteAll() {
+  async function handleDeleteReading(id: string) {
     Alert.alert(
-      'Delete All Readings',
-      'Are you sure? This cannot be undone.',
+      'Delete Reading',
+      'Are you sure you want to delete this reading?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete All',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteAllReadings();
-            setReadings([]);
+            await deleteReading(id);
+            setReadings((prev) => prev.filter((r) => r.id !== id));
           },
         },
       ]
     );
+  }
+
+  async function handleManualSave(
+    systolic: number,
+    diastolic: number,
+    heartRate: number | null,
+    notes: string | null
+  ) {
+    const reading: Reading = {
+      id: uuidv4(),
+      systolic,
+      diastolic,
+      heartRate,
+      timestamp: new Date().toISOString(),
+      notes,
+      source: 'manual',
+    };
+    await addReading(reading);
+    setShowManualEntry(false);
+    const updated = await getAllReadings();
+    setReadings(updated);
   }
 
   if (loading) {
@@ -78,10 +122,9 @@ export default function ReadingListScreen() {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyContent}>
-          <Text style={styles.emptyIcon}>heartbeat</Text>
           <Text style={styles.emptyTitle}>No readings yet</Text>
           <Text style={styles.emptyHint}>
-            Take a reading on your Omron monitor, then sync it here.
+            Take a reading on your Omron monitor, then sync it here, or add one manually.
           </Text>
         </View>
         <View style={styles.emptyActions}>
@@ -92,45 +135,79 @@ export default function ReadingListScreen() {
             </View>
           )}
           <TouchableOpacity
-            style={[styles.syncBtnLarge, syncing && styles.disabledBtn]}
-            onPress={handleSync}
+            style={[styles.actionBtn, syncing && styles.disabledBtn]}
+            onPress={savedDevice ? handleSync : () => navigation.navigate('Settings')}
             disabled={syncing}
           >
-            <Text style={styles.syncBtnLargeText}>Sync from Monitor</Text>
+            <Text style={styles.actionBtnText}>
+              {savedDevice ? 'Sync from Monitor' : 'Set Up Monitor'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.secondaryBtn]}
+            onPress={() => setShowManualEntry(true)}
+          >
+            <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>Add Manually</Text>
           </TouchableOpacity>
         </View>
+        <ManualEntrySheet
+          visible={showManualEntry}
+          onSave={handleManualSave}
+          onClose={() => setShowManualEntry(false)}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        {status ? (
-          <View style={styles.statusBar}>
-            <ActivityIndicator size="small" color="#2196F3" style={{ marginRight: 8 }} />
-            <Text style={styles.statusBarText}>{status}</Text>
-          </View>
-        ) : (
-          <View style={styles.toolbarButtons}>
-            <TouchableOpacity
-              style={[styles.syncBtn, syncing && styles.disabledBtn]}
-              onPress={handleSync}
-              disabled={syncing}
-            >
-              <Text style={styles.syncBtnText}>Sync</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.clearBtn} onPress={handleDeleteAll}>
-              <Text style={styles.clearBtnText}>Clear All</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      {/* Sync banner — only when device is configured */}
+      {savedDevice && (
+        <View style={styles.syncBanner}>
+          {status ? (
+            <View style={styles.syncBannerStatus}>
+              <ActivityIndicator size="small" color="#1565C0" style={{ marginRight: 8 }} />
+              <Text style={styles.syncBannerStatusText}>{status}</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.syncBannerDevice}>{savedDevice.name}</Text>
+              <TouchableOpacity
+                style={[styles.syncBannerBtn, syncing && styles.disabledBtn]}
+                onPress={handleSync}
+                disabled={syncing}
+              >
+                <Text style={styles.syncBannerBtnText}>Sync</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
       <FlatList
         data={readings}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ReadingRow reading={item} />}
+        renderItem={({ item }) => (
+          <SwipeableRow onDelete={() => handleDeleteReading(item.id)}>
+            <ReadingRow reading={item} />
+          </SwipeableRow>
+        )}
         style={styles.list}
+      />
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowManualEntry(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      <ManualEntrySheet
+        visible={showManualEntry}
+        onSave={handleManualSave}
+        onClose={() => setShowManualEntry(false)}
       />
     </View>
   );
@@ -141,6 +218,28 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { flex: 1 },
 
+  // Sync banner
+  syncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#E3F2FD',
+    borderBottomWidth: 1,
+    borderBottomColor: '#BBDEFB',
+  },
+  syncBannerDevice: { fontSize: 13, color: '#1565C0' },
+  syncBannerBtn: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  syncBannerBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  syncBannerStatus: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  syncBannerStatusText: { fontSize: 13, color: '#1565C0' },
+
   // Empty state
   emptyContainer: { flex: 1, backgroundColor: '#fff' },
   emptyContent: {
@@ -148,11 +247,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-    color: '#ddd',
   },
   emptyTitle: {
     fontSize: 22,
@@ -169,20 +263,29 @@ const styles = StyleSheet.create({
   emptyActions: {
     padding: 24,
     paddingBottom: 40,
+    gap: 12,
   },
-  syncBtnLarge: {
+  actionBtn: {
     padding: 16,
     borderRadius: 12,
     backgroundColor: '#2196F3',
     alignItems: 'center',
   },
-  syncBtnLargeText: {
+  actionBtnText: {
     fontSize: 17,
     color: '#fff',
     fontWeight: '600',
   },
+  secondaryBtn: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#2196F3',
+  },
+  secondaryBtnText: {
+    color: '#2196F3',
+  },
 
-  // Status banners
+  // Status
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -197,54 +300,25 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: '500',
   },
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-  },
-  statusBarText: {
-    fontSize: 14,
-    color: '#2196F3',
-    fontWeight: '500',
-  },
 
-  // Toolbar (when readings exist)
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
-    minHeight: 52,
-  },
-  toolbarButtons: {
-    flexDirection: 'row',
-    flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  syncBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+  // FAB
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  syncBtnText: {
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  clearBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  clearBtnText: {
-    fontSize: 14,
-    color: '#F44336',
-    fontWeight: '500',
-  },
+  fabText: { fontSize: 28, color: '#fff', lineHeight: 30 },
 
   disabledBtn: { opacity: 0.5 },
 });
