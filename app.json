@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vinibaggio.bloodpressure",
+      "bundleIdentifier": "net.vinibaggio.bloodpressure",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "This app connects to your Omron blood pressure monitor to import readings."
       }
