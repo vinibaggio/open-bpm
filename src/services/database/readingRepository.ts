@@ -1,4 +1,4 @@
-import { getDatabase } from './db';
+import { getDatabase, READINGS_SCHEMA } from './db';
 import { Reading } from '../../types/reading';
 
 export async function addReading(reading: Reading): Promise<void> {
@@ -24,11 +24,11 @@ export async function getReadingsByDateRange(startDate: string, endDate: string)
 
 export async function readingExistsByTimestamp(timestamp: string): Promise<boolean> {
   const db = await getDatabase();
-  const result = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) as count FROM readings WHERE timestamp = ?',
+  const result = await db.getFirstAsync(
+    'SELECT 1 FROM readings WHERE timestamp = ? LIMIT 1',
     [timestamp]
   );
-  return (result?.count ?? 0) > 0;
+  return result !== null;
 }
 
 export async function deleteReading(id: string): Promise<void> {
@@ -38,16 +38,6 @@ export async function deleteReading(id: string): Promise<void> {
 
 export async function deleteAllReadings(): Promise<void> {
   const db = await getDatabase();
-  await db.execAsync(`
-    DROP TABLE IF EXISTS readings;
-    CREATE TABLE IF NOT EXISTS readings (
-      id TEXT PRIMARY KEY,
-      systolic INTEGER NOT NULL,
-      diastolic INTEGER NOT NULL,
-      heartRate INTEGER,
-      timestamp TEXT NOT NULL,
-      notes TEXT,
-      source TEXT NOT NULL DEFAULT 'manual'
-    );
-  `);
+  await db.execAsync(`DROP TABLE IF EXISTS readings;`);
+  await db.execAsync(READINGS_SCHEMA);
 }

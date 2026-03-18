@@ -39,7 +39,7 @@ describe('readingRepository', () => {
 
   it('getAllReadings returns readings ordered by timestamp desc', async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([
-      { id: '1', systolic: 120, diastolic: 80, heartRate: 72, timestamp: '2026-03-14T10:00:00Z', notes: null, sourceImageUri: null },
+      { id: '1', systolic: 120, diastolic: 80, heartRate: 72, timestamp: '2026-03-14T10:00:00Z', notes: null, source: 'manual' },
     ]);
     const readings = await getAllReadings();
     expect(readings).toHaveLength(1);

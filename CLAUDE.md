@@ -58,6 +58,10 @@ To add support for a new blood pressure monitor:
 2. Implement scan + fetch logic returning `Reading[]` with `source: 'ble'`
 3. Add a sync button or auto-detection in `ReadingListScreen`
 
+### Database
+
+The readings table schema is defined once in `READINGS_SCHEMA` (`src/services/database/db.ts`) and reused wherever the table needs to be recreated. `deleteAllReadings()` uses DROP TABLE + recreate from this constant — do NOT replace it with `DELETE FROM readings`, because DROP+CREATE ensures a clean slate if the schema has changed after a migration, avoiding a corrupted/unusable old table.
+
 ### Abnormal Value Thresholds
 
 BP classification is in `src/utils/bloodPressure.ts` (AHA guidelines). Shared between the reading list UI (colored indicators) and PDF report (highlighted rows).
