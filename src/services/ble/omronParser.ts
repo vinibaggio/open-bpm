@@ -1,4 +1,5 @@
 import { OmronReading, RECORDS_PER_USER } from './types';
+import { bytesToHex } from './omronProtocol';
 
 /**
  * Check if a 16-byte block is all 0xFF (empty EEPROM slot)
@@ -101,7 +102,7 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       console.log(
         `[BLE:Parser] Skipping reading at offset ${i}: ` +
         `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
-        `(clock not set, raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+        `(clock not set, raw: ${bytesToHex(buffer.slice(i, i + 14))})`
       );
       i += 12;
       continue;
@@ -120,7 +121,7 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
       `timestamp=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
       `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')} ` +
-      `(raw: ${Array.from(buffer.slice(i, i + 14)).map(b => b.toString(16).padStart(2, '0')).join(' ')})`
+      `(raw: ${bytesToHex(buffer.slice(i, i + 14))})`
     );
 
     readings.push({
@@ -172,18 +173,3 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
   return readings;
 }
 
-// Keep the old single-record parser for backward compatibility
-export function parseRecord(record: Uint8Array): OmronReading | null {
-  if (isEmptyRecord(record)) return null;
-  // Use the stream parser with a single block
-  const results = parseAllRecords([record]);
-  return results.length > 0 ? results[0] : null;
-}
-
-/**
- * Debug helper: dump a block's raw bytes.
- */
-export function dumpRecord(record: Uint8Array, index: number): void {
-  const hex = Array.from(record).map(b => b.toString(16).padStart(2, '0')).join(' ');
-  console.log(`[BLE:Parser] Block #${index}: ${hex}`);
-}

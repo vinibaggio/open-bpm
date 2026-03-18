@@ -13,12 +13,12 @@ import { Reading } from '../types/reading';
 import {
   getAllReadings,
   deleteReading,
+  addReading,
 } from '../services/database/readingRepository';
 import ReadingRow from '../components/ReadingRow';
 import SwipeableRow from '../components/SwipeableRow';
 import ManualEntrySheet from '../components/ManualEntrySheet';
 import { scanForOmron, syncReadings } from '../services/ble/bleSync';
-import { addReading } from '../services/database/readingRepository';
 import { getSavedDevice, updateLastSyncDate, SavedDevice } from '../services/device/deviceStorage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -118,48 +118,39 @@ export default function ReadingListScreen() {
     );
   }
 
-  if (readings.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>No readings yet</Text>
-          <Text style={styles.emptyHint}>
-            Take a reading on your Omron monitor, then sync it here, or add one manually.
-          </Text>
-        </View>
-        <View style={styles.emptyActions}>
-          {status && (
-            <View style={styles.statusBanner}>
-              <ActivityIndicator size="small" color="#2196F3" style={{ marginRight: 8 }} />
-              <Text style={styles.statusBannerText}>{status}</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.actionBtn, syncing && styles.disabledBtn]}
-            onPress={savedDevice ? handleSync : () => navigation.navigate('Settings')}
-            disabled={syncing}
-          >
-            <Text style={styles.actionBtnText}>
-              {savedDevice ? 'Sync from Monitor' : 'Set Up Monitor'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.secondaryBtn]}
-            onPress={() => setShowManualEntry(true)}
-          >
-            <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>Add Manually</Text>
-          </TouchableOpacity>
-        </View>
-        <ManualEntrySheet
-          visible={showManualEntry}
-          onSave={handleManualSave}
-          onClose={() => setShowManualEntry(false)}
-        />
+  const content = readings.length === 0 ? (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyContent}>
+        <Text style={styles.emptyTitle}>No readings yet</Text>
+        <Text style={styles.emptyHint}>
+          Take a reading on your Omron monitor, then sync it here, or add one manually.
+        </Text>
       </View>
-    );
-  }
-
-  return (
+      <View style={styles.emptyActions}>
+        {status && (
+          <View style={styles.statusBanner}>
+            <ActivityIndicator size="small" color="#2196F3" style={{ marginRight: 8 }} />
+            <Text style={styles.statusBannerText}>{status}</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={[styles.actionBtn, syncing && styles.disabledBtn]}
+          onPress={savedDevice ? handleSync : () => navigation.navigate('Settings')}
+          disabled={syncing}
+        >
+          <Text style={styles.actionBtnText}>
+            {savedDevice ? 'Sync from Monitor' : 'Set Up Monitor'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.secondaryBtn]}
+          onPress={() => setShowManualEntry(true)}
+        >
+          <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>Add Manually</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ) : (
     <View style={styles.container}>
       {/* Sync banner — only when device is configured */}
       {savedDevice && (
@@ -203,13 +194,18 @@ export default function ReadingListScreen() {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+    </View>
+  );
 
+  return (
+    <>
+      {content}
       <ManualEntrySheet
         visible={showManualEntry}
         onSave={handleManualSave}
         onClose={() => setShowManualEntry(false)}
       />
-    </View>
+    </>
   );
 }
 

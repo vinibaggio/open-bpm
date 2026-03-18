@@ -19,6 +19,7 @@ import {
   parseResponseType,
   extractResponseData,
   hexDump,
+  bytesToHex,
 } from './omronProtocol';
 import { parseAllRecords, isEmptyRecord } from './omronParser';
 import { addReading, readingExistsByTimestamp } from '../database/readingRepository';
@@ -47,41 +48,6 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function waitForNotification(
-  device: Device,
-  charUuid: string,
-  timeoutMs: number = 5000
-): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      subscription.remove();
-      console.log(`[BLE:Sync] TIMEOUT waiting for notification on ${charUuid} (${timeoutMs}ms)`);
-      reject(new Error('BLE notification timeout'));
-    }, timeoutMs);
-
-    const subscription = device.monitorCharacteristicForService(
-      OMRON_COMM_SERVICE_UUID,
-      charUuid,
-      (error, char) => {
-        clearTimeout(timer);
-        subscription.remove();
-        if (error) {
-          console.log(`[BLE:Sync] Notification error on ${charUuid}: ${error.message}`);
-          reject(error);
-          return;
-        }
-        if (char?.value) {
-          const data = base64ToUint8Array(char.value);
-          resolve(data);
-        } else {
-          console.log(`[BLE:Sync] Empty notification on ${charUuid}`);
-          reject(new Error('Empty notification'));
-        }
-      }
-    );
-  });
-}
-
 async function writeCharacteristic(
   device: Device,
   charUuid: string,
@@ -101,16 +67,6 @@ async function writeCharacteristic(
       uint8ArrayToBase64(data)
     );
   }
-}
-
-async function sendCommand(device: Device, command: Uint8Array): Promise<Uint8Array> {
-  // Set up RX notification listener before writing TX
-  const responsePromise = waitForNotification(device, RX_CHAR_UUIDS[0]);
-
-  // Write command to TX channel 0
-  await writeCharacteristic(device, TX_CHAR_UUIDS[0], command);
-
-  return responsePromise;
 }
 
 /**
@@ -326,8 +282,7 @@ export async function pairDevice(device: Device, onStatus?: StatusCallback): Pro
     try {
       await writeCharacteristic(connected, UNLOCK_CHAR_UUID, programModeCmd);
       const resp = await unlockQueue.waitNext(4000);
-      const respHex = Array.from(resp).map(b => b.toString(16).padStart(2, '0')).join(' ');
-      console.log(`[BLE:Sync] Program mode response: ${respHex}`);
+      console.log(`[BLE:Sync] Program mode response: ${bytesToHex(resp)}`);
       if (resp[0] === 0x82) {
         programSuccess = true;
         break;
@@ -347,8 +302,7 @@ export async function pairDevice(device: Device, onStatus?: StatusCallback): Pro
     await writeCharacteristic(connected, UNLOCK_CHAR_UUID, keyCmd);
     try {
       const keyResp = await unlockQueue.waitNext(5000);
-      const keyHex = Array.from(keyResp).map(b => b.toString(16).padStart(2, '0')).join(' ');
-      console.log(`[BLE:Sync] Key store response: ${keyHex}`);
+      console.log(`[BLE:Sync] Key store response: ${bytesToHex(keyResp)}`);
     } catch (e: any) {
       console.log(`[BLE:Sync] Key store timeout: ${e.message}`);
     }
@@ -364,8 +318,7 @@ export async function pairDevice(device: Device, onStatus?: StatusCallback): Pro
       try {
         await writeCharacteristic(connected, UNLOCK_CHAR_UUID, unlockCmd);
         const resp = await unlockQueue.waitNext(4000);
-        const respHex = Array.from(resp).map(b => b.toString(16).padStart(2, '0')).join(' ');
-        console.log(`[BLE:Sync] Unlock response: ${respHex}`);
+        console.log(`[BLE:Sync] Unlock response: ${bytesToHex(resp)}`);
         if (resp[0] === 0x81) {
           unlockSuccess = true;
           break;
@@ -431,8 +384,7 @@ export async function syncReadings(
     try {
       await writeCharacteristic(connected, UNLOCK_CHAR_UUID, unlockCmd);
       const unlockResp = await unlockQueue.waitNext(3000);
-      const respHex = Array.from(unlockResp).map(b => b.toString(16).padStart(2, '0')).join(' ');
-      console.log(`[BLE:Sync] Unlock response: ${respHex}`);
+      console.log(`[BLE:Sync] Unlock response: ${bytesToHex(unlockResp)}`);
     } catch (e: any) {
       console.log(`[BLE:Sync] Unlock timeout (may not be needed): ${e.message}`);
     }

@@ -7,8 +7,12 @@
  * XOR checksum: all bytes XORed together must equal 0.
  */
 
+export function bytesToHex(data: Uint8Array): string {
+  return Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+}
+
 export function hexDump(data: Uint8Array, label?: string): string {
-  const hex = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+  const hex = bytesToHex(data);
   const prefix = label ? `[BLE:Protocol] ${label}: ` : '[BLE:Protocol] ';
   return `${prefix}${hex} (${data.length} bytes)`;
 }

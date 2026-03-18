@@ -27,7 +27,7 @@ function daysAgo(days: number): string {
   return d.toISOString();
 }
 
-export interface Stats {
+interface Stats {
   avgSystolic: number;
   avgDiastolic: number;
   avgHR: number;
@@ -189,7 +189,7 @@ export default function TrendsScreen() {
       <View style={styles.chartSection}>
         <Text style={styles.chartLabel}>Blood Pressure</Text>
         {bpChartData.length > 1 ? (
-          <View style={{ height: 200 }}>
+          <View style={styles.bpChartContainer}>
             <CartesianChart
               data={bpChartData}
               xKey="x"
@@ -216,10 +216,10 @@ export default function TrendsScreen() {
         )}
         <View style={styles.legend}>
           <Text style={styles.legendItem}>
-            <Text style={{ color: '#F44336' }}>●</Text> Systolic
+            <Text style={styles.legendDotSystolic}>●</Text> Systolic
           </Text>
           <Text style={styles.legendItem}>
-            <Text style={{ color: '#2196F3' }}>●</Text> Diastolic
+            <Text style={styles.legendDotDiastolic}>●</Text> Diastolic
           </Text>
         </View>
       </View>
@@ -228,7 +228,7 @@ export default function TrendsScreen() {
       {hrChartData.length > 1 && (
         <View style={styles.chartSection}>
           <Text style={styles.chartLabel}>Heart Rate</Text>
-          <View style={{ height: 140 }}>
+          <View style={styles.hrChartContainer}>
             <CartesianChart
               data={hrChartData}
               xKey="x"
@@ -245,7 +245,7 @@ export default function TrendsScreen() {
           </View>
           <View style={styles.legend}>
             <Text style={styles.legendItem}>
-              <Text style={{ color: '#9C27B0' }}>●</Text> Heart Rate (bpm)
+              <Text style={styles.legendDotHR}>●</Text> Heart Rate (bpm)
             </Text>
           </View>
         </View>
@@ -261,13 +261,13 @@ export default function TrendsScreen() {
         </View>
         <View style={[styles.stat, styles.statBorder]}>
           <Text style={styles.statLabel}>Avg HR</Text>
-          <Text style={[styles.statValue, { color: '#9C27B0' }]}>
+          <Text style={[styles.statValue, styles.hrColor]}>
             {stats.avgHR || '\u2014'}
           </Text>
         </View>
         <View style={[styles.stat, styles.statBorder]}>
           <Text style={styles.statLabel}>Highest</Text>
-          <Text style={[styles.statValue, highestIsAbnormal && { color: '#F44336' }]}>
+          <Text style={[styles.statValue, highestIsAbnormal && styles.abnormalColor]}>
             {stats.highestSystolic}/{stats.highestDiastolic}
           </Text>
         </View>
@@ -305,10 +305,17 @@ const styles = StyleSheet.create({
   rangeBtnText: { fontSize: 13, color: '#888' },
   rangeBtnTextActive: { color: '#2196F3', fontWeight: '600' },
 
+  bpChartContainer: { height: 200 },
+  hrChartContainer: { height: 140 },
+  hrColor: { color: '#9C27B0' },
+  abnormalColor: { color: '#F44336' },
   chartSection: { paddingHorizontal: 8, paddingTop: 12 },
   chartLabel: { fontSize: 12, fontWeight: '600', color: '#666', paddingLeft: 8, marginBottom: 4 },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingBottom: 8 },
   legendItem: { fontSize: 11, color: '#666' },
+  legendDotSystolic: { color: '#F44336' },
+  legendDotDiastolic: { color: '#2196F3' },
+  legendDotHR: { color: '#9C27B0' },
 
   singleReading: { alignItems: 'center', paddingVertical: 24 },
   singleReadingText: { fontSize: 28, fontWeight: '700', color: '#333' },

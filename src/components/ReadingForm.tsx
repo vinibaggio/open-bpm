@@ -72,7 +72,7 @@ export default function ReadingForm({
 
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelText}>Clear</Text>
+          <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.saveBtn, !canSave && styles.disabledBtn]}
