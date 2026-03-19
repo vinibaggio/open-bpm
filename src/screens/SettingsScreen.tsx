@@ -12,15 +12,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { getSavedDevice, saveDevice, forgetDevice, SavedDevice } from '../services/device/deviceStorage';
 import { scanForOmron } from '../services/ble/bleSync';
-import { getAllReadings, deleteAllReadings } from '../services/database/readingRepository';
+import { getAllReadings, deleteAllReadings, addReading, readingExistsByTimestamp } from '../services/database/readingRepository';
 import { generateReportHtml } from '../services/report/reportHtml';
+import { parseReadingsCsv } from '../services/csv/csvImport';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function SettingsScreen() {
   const [device, setDevice] = useState<SavedDevice | null>(null);
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,6 +97,52 @@ export default function SettingsScreen() {
     await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
   }
 
+  async function handleImportCsv() {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['text/csv', 'text/comma-separated-values', 'text/*'],
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) return;
+
+    setImporting(true);
+    try {
+      const uri = result.assets[0].uri;
+      const content = await FileSystem.readAsStringAsync(uri);
+      const { readings, invalidCount } = parseReadingsCsv(content);
+
+      if (readings.length === 0 && invalidCount === 0) {
+        Alert.alert(
+          'Import Failed',
+          "The file doesn't appear to be a valid readings CSV. Expected 7 columns: Date, Time, Systolic, Diastolic, HeartRate, Manual/BLE, Notes"
+        );
+        return;
+      }
+
+      let imported = 0;
+      let duplicates = 0;
+      for (const reading of readings) {
+        if (await readingExistsByTimestamp(reading.timestamp)) {
+          duplicates++;
+          continue;
+        }
+        await addReading({ ...reading, id: uuidv4() });
+        imported++;
+      }
+
+      Alert.alert(
+        'Import Complete',
+        `Imported ${imported} reading${imported !== 1 ? 's' : ''}` +
+          (duplicates > 0 ? ` (${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped)` : '') +
+          (invalidCount > 0 ? ` (${invalidCount} invalid row${invalidCount !== 1 ? 's' : ''} skipped)` : '')
+      );
+    } catch (e: any) {
+      Alert.alert('Import Error', e.message || 'Failed to import CSV.');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleDeleteAll() {
     Alert.alert(
       'Delete All Readings',
@@ -153,10 +205,18 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Export */}
-      <Text style={styles.sectionHeader}>EXPORT</Text>
+      {/* Import / Export */}
+      <Text style={styles.sectionHeader}>IMPORT / EXPORT</Text>
       <View style={styles.group}>
-        <TouchableOpacity style={styles.row} onPress={handleExportAll}>
+        <TouchableOpacity style={styles.row} onPress={handleImportCsv} disabled={importing}>
+          <Text style={styles.rowTitle}>Import Readings from CSV</Text>
+          {importing ? (
+            <ActivityIndicator size="small" color="#2196F3" />
+          ) : (
+            <Text style={styles.chevron}>›</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={handleExportAll}>
           <Text style={styles.rowTitle}>Export All Readings as PDF</Text>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
