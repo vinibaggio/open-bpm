@@ -77,11 +77,11 @@ export default function SettingsScreen() {
       Alert.alert('No Data', 'No readings to export.');
       return;
     }
-    const header = 'Date,Time,Systolic,Diastolic,HeartRate,Source,Notes';
+    const header = 'Date (YYYY-MM-DD),Time (24h HH:MM:SS),Systolic,Diastolic,HeartRate,Manual/BLE,Notes';
     const rows = readings.map(r => {
       const d = new Date(r.timestamp);
       const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
-      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
       const notes = r.notes ? `"${r.notes.replace(/"/g, '""')}"` : '';
       return `${date},${time},${r.systolic},${r.diastolic},${r.heartRate ?? ''},${r.source},${notes}`;
     });
