@@ -11,7 +11,6 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { getSavedDevice, saveDevice, forgetDevice, SavedDevice } from '../services/device/deviceStorage';
@@ -92,7 +91,7 @@ export default function SettingsScreen() {
       return `${date},${time},${r.systolic},${r.diastolic},${r.heartRate ?? ''},${r.source},${notes}`;
     });
     const csv = [header, ...rows].join('\n');
-    const file = new File(Paths.cache, 'readings.csv');
+    const file = new FileSystem.File(FileSystem.Paths.cache, 'readings.csv');
     file.write(csv);
     await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
   }
