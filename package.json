@@ -52,7 +52,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/vinibaggio/bloodpressure.git"
+    "url": "https://github.com/vinibaggio/open-bpm.git"
   },
   "license": "MIT",
   "author": "Vinicius Baggio Fuentes"
