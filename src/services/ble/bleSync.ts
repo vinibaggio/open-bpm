@@ -467,8 +467,8 @@ export async function syncReadings(
       console.log(`[BLE:Sync] END unexpected: type=0x${endType.toString(16)}`);
     }
 
-    // Encode raw EEPROM blocks as base64 for debugging
-    const rawDataBase64 = encodeRawBlocks(allBlocks);
+    // Encode raw EEPROM blocks as base64 for debugging (dev builds only)
+    const rawDataBase64 = __DEV__ ? encodeRawBlocks(allBlocks) : null;
 
     // Import readings
     let imported = 0;
