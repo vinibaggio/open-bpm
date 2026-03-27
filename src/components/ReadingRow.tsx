@@ -1,12 +1,13 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Reading } from '../types/reading';
 import { classifyBP, BP_COLORS, BP_LABELS } from '../utils/bloodPressure';
 
 interface Props {
   reading: Reading;
+  onPress?: () => void;
 }
 
-export default function ReadingRow({ reading }: Props) {
+export default function ReadingRow({ reading, onPress }: Props) {
   const category = classifyBP(reading.systolic, reading.diastolic);
   const color = BP_COLORS[category];
   const label = BP_LABELS[category];
@@ -15,8 +16,10 @@ export default function ReadingRow({ reading }: Props) {
   const dateStr = date.toLocaleDateString();
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const Container = onPress ? TouchableOpacity : View;
+
   return (
-    <View style={styles.row}>
+    <Container style={styles.row} onPress={onPress} activeOpacity={0.6}>
       <View style={[styles.indicator, { backgroundColor: color }]} />
       <View style={styles.content}>
         <Text style={styles.bp}>
@@ -30,7 +33,7 @@ export default function ReadingRow({ reading }: Props) {
           </Text>
         </Text>
       </View>
-    </View>
+    </Container>
   );
 }
 

@@ -14,10 +14,12 @@ import {
   getAllReadings,
   deleteReading,
   addReading,
+  updateReading,
 } from '../services/database/readingRepository';
 import ReadingRow from '../components/ReadingRow';
 import SwipeableRow from '../components/SwipeableRow';
 import ManualEntrySheet from '../components/ManualEntrySheet';
+import EditReadingSheet from '../components/EditReadingSheet';
 import { scanForOmron, syncReadings } from '../services/ble/bleSync';
 import { getSavedDevice, updateLastSyncDate, SavedDevice } from '../services/device/deviceStorage';
 import { useNavigation } from '@react-navigation/native';
@@ -33,6 +35,7 @@ export default function ReadingListScreen() {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [editingReading, setEditingReading] = useState<Reading | null>(null);
   const [savedDevice, setSavedDevice] = useState<SavedDevice | null>(null);
 
   useFocusEffect(
@@ -93,19 +96,27 @@ export default function ReadingListScreen() {
     systolic: number,
     diastolic: number,
     heartRate: number | null,
-    notes: string | null
+    notes: string | null,
+    timestamp: Date
   ) {
     const reading: Reading = {
       id: uuidv4(),
       systolic,
       diastolic,
       heartRate,
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp.toISOString(),
       notes,
       source: 'manual',
     };
     await addReading(reading);
     setShowManualEntry(false);
+    const updated = await getAllReadings();
+    setReadings(updated);
+  }
+
+  async function handleEditSave(reading: Reading) {
+    await updateReading(reading);
+    setEditingReading(null);
     const updated = await getAllReadings();
     setReadings(updated);
   }
@@ -180,7 +191,7 @@ export default function ReadingListScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <SwipeableRow onDelete={() => handleDeleteReading(item.id)}>
-            <ReadingRow reading={item} />
+            <ReadingRow reading={item} onPress={() => setEditingReading(item)} />
           </SwipeableRow>
         )}
         style={styles.list}
@@ -204,6 +215,12 @@ export default function ReadingListScreen() {
         visible={showManualEntry}
         onSave={handleManualSave}
         onClose={() => setShowManualEntry(false)}
+      />
+      <EditReadingSheet
+        reading={editingReading}
+        visible={editingReading !== null}
+        onSave={handleEditSave}
+        onClose={() => setEditingReading(null)}
       />
     </>
   );

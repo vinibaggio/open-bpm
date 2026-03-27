@@ -31,6 +31,14 @@ export async function readingExistsByTimestamp(timestamp: string): Promise<boole
   return result !== null;
 }
 
+export async function updateReading(reading: Reading): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    'UPDATE readings SET systolic = ?, diastolic = ?, heartRate = ?, timestamp = ?, notes = ? WHERE id = ?',
+    [reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.id]
+  );
+}
+
 export async function deleteReading(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM readings WHERE id = ?', [id]);

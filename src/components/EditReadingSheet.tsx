@@ -1,13 +1,34 @@
-import { Modal, View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Modal, View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import ReadingForm from './ReadingForm';
+import { Reading } from '../types/reading';
 
 interface Props {
+  reading: Reading | null;
   visible: boolean;
-  onSave: (systolic: number, diastolic: number, heartRate: number | null, notes: string | null, timestamp: Date) => void;
+  onSave: (reading: Reading) => void;
   onClose: () => void;
 }
 
-export default function ManualEntrySheet({ visible, onSave, onClose }: Props) {
+export default function EditReadingSheet({ reading, visible, onSave, onClose }: Props) {
+  if (!reading) return null;
+
+  function handleSave(
+    systolic: number,
+    diastolic: number,
+    heartRate: number | null,
+    notes: string | null,
+    timestamp: Date
+  ) {
+    onSave({
+      ...reading!,
+      systolic,
+      diastolic,
+      heartRate,
+      notes,
+      timestamp: timestamp.toISOString(),
+    });
+  }
+
   return (
     <Modal
       visible={visible}
@@ -20,14 +41,20 @@ export default function ManualEntrySheet({ visible, onSave, onClose }: Props) {
         style={styles.container}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Manual Entry</Text>
+          <Text style={styles.title}>Edit Reading</Text>
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.closeBtn}>Cancel</Text>
           </TouchableOpacity>
         </View>
         <ScrollView style={styles.formContainer}>
           <ReadingForm
-            onSave={onSave}
+            initialSystolic={reading.systolic}
+            initialDiastolic={reading.diastolic}
+            initialHeartRate={reading.heartRate}
+            initialNotes={reading.notes}
+            initialTimestamp={reading.timestamp}
+            showTimestamp
+            onSave={handleSave}
             onCancel={onClose}
           />
         </ScrollView>

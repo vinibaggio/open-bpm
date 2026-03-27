@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface Props {
   initialSystolic?: number;
   initialDiastolic?: number;
   initialHeartRate?: number | null;
-  onSave: (systolic: number, diastolic: number, heartRate: number | null, notes: string | null) => void;
+  initialNotes?: string | null;
+  initialTimestamp?: string;
+  showTimestamp?: boolean;
+  onSave: (systolic: number, diastolic: number, heartRate: number | null, notes: string | null, timestamp: Date) => void;
   onCancel: () => void;
 }
 
@@ -13,13 +17,19 @@ export default function ReadingForm({
   initialSystolic,
   initialDiastolic,
   initialHeartRate,
+  initialNotes,
+  initialTimestamp,
+  showTimestamp = false,
   onSave,
   onCancel,
 }: Props) {
   const [systolic, setSystolic] = useState(initialSystolic?.toString() ?? '');
   const [diastolic, setDiastolic] = useState(initialDiastolic?.toString() ?? '');
   const [heartRate, setHeartRate] = useState(initialHeartRate?.toString() ?? '');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialNotes ?? '');
+  const [timestamp, setTimestamp] = useState(initialTimestamp ? new Date(initialTimestamp) : new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const canSave = systolic.length > 0 && diastolic.length > 0;
 
@@ -28,12 +38,64 @@ export default function ReadingForm({
       parseInt(systolic, 10),
       parseInt(diastolic, 10),
       heartRate ? parseInt(heartRate, 10) : null,
-      notes || null
+      notes || null,
+      timestamp
     );
   }
 
+  function handleDateChange(_event: DateTimePickerEvent, selectedDate?: Date) {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) {
+      const updated = new Date(timestamp);
+      updated.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      setTimestamp(updated);
+    }
+  }
+
+  function handleTimeChange(_event: DateTimePickerEvent, selectedDate?: Date) {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (selectedDate) {
+      const updated = new Date(timestamp);
+      updated.setHours(selectedDate.getHours(), selectedDate.getMinutes());
+      setTimestamp(updated);
+    }
+  }
+
+  const dateStr = timestamp.toLocaleDateString();
+  const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
   return (
     <View style={styles.container}>
+      {showTimestamp && (
+        <>
+          <Text style={styles.label}>Date & Time</Text>
+          <View style={styles.dateTimeRow}>
+            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateBtnText}>{dateStr}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.dateBtnText}>{timeStr}</Text>
+            </TouchableOpacity>
+          </View>
+          {showDatePicker && (
+            <DateTimePicker
+              value={timestamp}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+            />
+          )}
+          {showTimePicker && (
+            <DateTimePicker
+              value={timestamp}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleTimeChange}
+            />
+          )}
+        </>
+      )}
+
       <Text style={styles.label}>Systolic (mmHg)</Text>
       <TextInput
         style={styles.input}
@@ -97,6 +159,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   notesInput: { height: 60, textAlignVertical: 'top' },
+  dateTimeRow: { flexDirection: 'row', gap: 12 },
+  dateBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  dateBtnText: { fontSize: 16, color: '#333' },
   buttons: { flexDirection: 'row', marginTop: 24, gap: 12 },
   cancelBtn: {
     flex: 1,
