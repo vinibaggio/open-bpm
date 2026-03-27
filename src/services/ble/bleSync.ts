@@ -454,7 +454,6 @@ export async function syncReadings(
     }
 
     // Parse all blocks as a continuous byte stream
-    console.log(`[BLE:Sync] Read ${allBlocks.length} blocks (${emptyCount} empty, ${errorCount} errors)`);
     onStatus?.('Parsing readings...');
     const readings = parseAllRecords(allBlocks);
 

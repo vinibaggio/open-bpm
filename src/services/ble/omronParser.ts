@@ -85,18 +85,36 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
 
     const counter = buffer[i];
 
-    // Decode timestamp from bytes [7-13] of the record
-    const yearRaw = buffer[i + 7];
-    const minuteRaw = buffer[i + 8];
-    const hourRaw = buffer[i + 9];
-    const monthSecRaw = buffer[i + 10];
-    const dayRaw = buffer[i + 11];
+    // Decode timestamp from bytes [7-11] using omblepy bit-field layout.
+    // The timestamp is bit-packed across bytes 7-11 (relative to record start):
+    //   byte[7] bits [0:5] = year since 2000 (6 bits)
+    //   byte[8] bits [0:4] = hour (5 bits)
+    //   byte[8] bits [5:7] + byte[9] bits [0:1] = day (5 bits)
+    //   byte[9] bits [2:5] = month (4 bits)
+    //   byte[9] bit 6 = irregular heartbeat
+    //   byte[9] bit 7 = movement detected
+    //   byte[10] bits [0:5] = second (6 bits)
+    //   byte[10] bits [6:7] + byte[11] bits [0:3] = minute (6 bits)
+    const b7 = buffer[i + 7];
+    const b8 = buffer[i + 8];
+    const b9 = buffer[i + 9];
+    const b10 = buffer[i + 10];
+    const b11 = buffer[i + 11];
+
+    const year = (b7 & 0x3F) + 2000;
+    const hour = b8 & 0x1F;
+    const day = ((b9 & 0x03) << 3) | (b8 >> 5);
+    const month = (b9 >> 2) & 0x0F;
+    const irregularHeartbeat = ((b9 >> 6) & 1) === 1;
+    const movementDetected = ((b9 >> 7) & 1) === 1;
+    const second = Math.min(b10 & 0x3F, 59); // can range 0-63, cap at 59
+    const minute = ((b11 & 0x0F) << 2) | (b10 >> 6);
 
     // Skip readings without valid timestamps:
     // - default year 0x15 (21 = 2021) means clock was not set
     // - year outside 2024-2035 means bogus/stale EEPROM data
-    const year = 2000 + yearRaw;
-    const hasValidTimestamp = yearRaw !== 0x15 && year >= 2024 && year <= 2035;
+    const hasValidTimestamp = year !== 2021 && year >= 2024 && year <= 2035
+      && month >= 1 && month <= 12 && day >= 1 && day <= 31;
 
     if (!hasValidTimestamp) {
       console.log(
@@ -108,12 +126,6 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       continue;
     }
 
-    const minute = minuteRaw & 0xF7; // clear bit 3 (clock-set flag)
-    const hour = hourRaw;
-    const month = (monthSecRaw >> 6) + 1; // upper 2 bits + 1
-    const day = dayRaw & 0xF7; // clear bit 3 (clock-set flag)
-    const second = monthSecRaw & 0x3F; // lower 6 bits
-
     const timestamp = new Date(year, month - 1, day, hour, minute, second);
 
     console.log(
@@ -121,6 +133,7 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       `counter=0x${counter.toString(16)} SYS=${sys} DIA=${dia} HR=${hr} ` +
       `timestamp=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ` +
       `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')} ` +
+      `mov=${movementDetected ? 1 : 0} ihb=${irregularHeartbeat ? 1 : 0} ` +
       `(raw: ${bytesToHex(buffer.slice(i, i + 14))})`
     );
 
@@ -130,8 +143,8 @@ export function parseAllRecords(blocks: Uint8Array[]): OmronReading[] {
       diastolic: dia,
       heartRate: hr,
       timestamp,
-      irregularHeartbeat: false,
-      movementDetected: false,
+      irregularHeartbeat,
+      movementDetected,
     });
 
     // Skip ahead past this record (records are ~14 bytes)
