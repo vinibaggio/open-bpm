@@ -23,7 +23,7 @@ Built with React Native + Expo (TypeScript).
 
 ```bash
 git clone https://github.com/vinibaggio/open-bpm.git
-cd bloodpressure
+cd open-bpm
 npm install
 ```
 
