@@ -20,6 +20,7 @@ describe('parseReadingsCsv', () => {
       timestamp: new Date(2026, 2, 17, 14, 38, 42).toISOString(),
       notes: null,
       source: 'ble',
+      rawData: null,
     });
 
     expect(result.readings[1]).toEqual({
@@ -29,6 +30,7 @@ describe('parseReadingsCsv', () => {
       timestamp: new Date(2026, 2, 18, 9, 15, 0).toISOString(),
       notes: 'after coffee',
       source: 'manual',
+      rawData: null,
     });
   });
 

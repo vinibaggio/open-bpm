@@ -96,6 +96,7 @@ function parseRow(fields: string[]): ParsedReading | null {
     timestamp: date.toISOString(),
     notes,
     source,
+    rawData: null,
   };
 }
 

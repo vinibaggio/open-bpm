@@ -22,6 +22,7 @@ import {
   bytesToHex,
 } from './omronProtocol';
 import { parseAllRecords, isEmptyRecord } from './omronParser';
+import { encodeRawBlocks } from './debugParser';
 import { addReading, readingExistsByTimestamp } from '../database/readingRepository';
 import { Reading } from '../../types/reading';
 import { v4 as uuidv4 } from 'uuid';
@@ -466,6 +467,9 @@ export async function syncReadings(
       console.log(`[BLE:Sync] END unexpected: type=0x${endType.toString(16)}`);
     }
 
+    // Encode raw EEPROM blocks as base64 for debugging
+    const rawDataBase64 = encodeRawBlocks(allBlocks);
+
     // Import readings
     let imported = 0;
     for (const omronReading of readings) {
@@ -483,6 +487,7 @@ export async function syncReadings(
         timestamp,
         notes: null,
         source: 'ble',
+        rawData: rawDataBase64,
       };
       await addReading(reading);
       imported++;

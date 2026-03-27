@@ -31,6 +31,7 @@ function makeReading(sys: number, dia: number, hr: number | null): Reading {
     timestamp: new Date().toISOString(),
     notes: null,
     source: 'manual',
+    rawData: null,
   };
 }
 

@@ -4,8 +4,8 @@ import { Reading } from '../../types/reading';
 export async function addReading(reading: Reading): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    'INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [reading.id, reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.source]
+    'INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes, source, rawData) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [reading.id, reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.source, reading.rawData]
   );
 }
 
@@ -34,8 +34,8 @@ export async function readingExistsByTimestamp(timestamp: string): Promise<boole
 export async function updateReading(reading: Reading): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    'UPDATE readings SET systolic = ?, diastolic = ?, heartRate = ?, timestamp = ?, notes = ? WHERE id = ?',
-    [reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.id]
+    'UPDATE readings SET systolic = ?, diastolic = ?, heartRate = ?, timestamp = ?, notes = ?, rawData = ? WHERE id = ?',
+    [reading.systolic, reading.diastolic, reading.heartRate, reading.timestamp, reading.notes, reading.rawData, reading.id]
   );
 }
 

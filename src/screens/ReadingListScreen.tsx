@@ -107,6 +107,7 @@ export default function ReadingListScreen() {
       timestamp: timestamp.toISOString(),
       notes,
       source: 'manual',
+      rawData: null,
     };
     await addReading(reading);
     setShowManualEntry(false);

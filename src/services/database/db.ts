@@ -8,7 +8,8 @@ export const READINGS_SCHEMA = `
     heartRate INTEGER,
     timestamp TEXT NOT NULL,
     notes TEXT,
-    source TEXT NOT NULL DEFAULT 'manual'
+    source TEXT NOT NULL DEFAULT 'manual',
+    rawData TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON readings(timestamp);
 `;

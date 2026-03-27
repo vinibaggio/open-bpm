@@ -11,6 +11,7 @@ describe('generateReportHtml', () => {
       timestamp: '2026-03-14T10:00:00Z',
       notes: null,
       source: 'manual',
+      rawData: null,
     },
     {
       id: '2',
@@ -20,6 +21,7 @@ describe('generateReportHtml', () => {
       timestamp: '2026-03-13T09:00:00Z',
       notes: null,
       source: 'manual',
+      rawData: null,
     },
   ];
 
