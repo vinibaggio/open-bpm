@@ -74,7 +74,7 @@ When the clock is not set, year defaults to 0x15 (2021) — these readings are s
 
 Debug logging: `[BLE:Sync]`, `[BLE:Protocol]`, `[BLE:Parser]` prefixes in Metro console.
 
-Reference: Protocol based on [omblepy](https://github.com/userx14/omblepy) and [ubpm](https://codeberg.org/LazyT/ubpm). Local clones at `../omblepy` and `../ubpm` for reference.
+Reference: Protocol based on [omblepy](https://github.com/userx14/omblepy) and [ubpm](https://codeberg.org/LazyT/ubpm).
 
 ### Adding New BPM Devices
 
